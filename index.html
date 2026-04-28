@@ -198,9 +198,29 @@
 
   .footer-note {
     text-align: center;
-    font-size: 12px; color: var(--text-faint);
-    margin-top: 32px; padding-bottom: 24px;
+    margin-top: 32px;
+    padding-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
+  .footer-main {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    color: var(--text-muted);
+  }
+  .footer-dev {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .footer-dev a {
+    color: var(--volt);
+    text-decoration: none;
+    opacity: .7;
+    transition: opacity .2s;
+  }
+  .footer-dev a:hover { opacity: 1; }
 
   /* ── MODAL ── */
   .modal-overlay {
@@ -839,29 +859,7 @@
     letter-spacing: 1.2px;
     color: var(--text-muted);
   }
-  .schedule-mode-toggle {
-    display: flex;
-    gap: 6px;
-  }
-  .mode-btn {
-    padding: 5px 12px;
-    border-radius: 100px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .8px;
-    cursor: pointer;
-    transition: all .2s;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .mode-btn.active {
-    background: rgba(212,255,0,.1);
-    border-color: rgba(212,255,0,.4);
-    color: var(--volt);
-  }
+
   .schedule-fields {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1169,7 +1167,10 @@
       </div>
     </div>
 
-    <div class="footer-note">Volley Manager Breed · Temporada 2025</div>
+    <div class="footer-note">
+      <div class="footer-main">Volley Manager Breed · Temporada 2026</div>
+      <div class="footer-dev">Desenvolvido por Josué Maia</div>
+    </div>
   </div>
 </div>
 
@@ -1292,10 +1293,6 @@
     <div class="schedule-card" id="schedule-card">
       <div class="schedule-card-header">
         <div class="schedule-card-title">📅 Configurar Jogo</div>
-        <div class="schedule-mode-toggle">
-          <button class="mode-btn active" id="mode-btn-auto" onclick="setScheduleMode('auto')">Automático</button>
-          <button class="mode-btn" id="mode-btn-custom" onclick="setScheduleMode('custom')">Personalizado</button>
-        </div>
       </div>
 
       <!-- Auto mode -->
@@ -1333,32 +1330,6 @@
         <button class="btn-save-schedule" id="btn-save-auto" onclick="saveSchedule('auto')">Salvar configuração</button>
       </div>
 
-      <!-- Custom mode -->
-      <div id="schedule-custom-panel" style="display:none">
-        <div class="schedule-fields three-col">
-          <div class="schedule-field" style="grid-column:span 3">
-            <label>Data do jogo</label>
-            <input type="date" id="sch-custom-date" />
-          </div>
-          <div class="schedule-field">
-            <label>Horário início</label>
-            <input type="time" id="sch-custom-start" value="19:00" />
-          </div>
-          <div class="schedule-field">
-            <label>Horário fim</label>
-            <input type="time" id="sch-custom-end" value="20:00" />
-          </div>
-          <div class="schedule-field">
-            <label>Local</label>
-            <input type="text" id="sch-custom-location" placeholder="Ex: Clube Breed" />
-          </div>
-          <div class="schedule-field">
-            <label>Vagas máximas</label>
-            <input type="number" id="sch-custom-max" value="14" min="1" max="100" placeholder="14" />
-          </div>
-        </div>
-        <button class="btn-save-schedule" id="btn-save-custom" onclick="saveSchedule('custom')">Salvar e aplicar</button>
-      </div>
     </div>
 
     <!-- Registration Toggle -->
@@ -2374,18 +2345,10 @@ document.getElementById('confirm-dialog').addEventListener('click', (e) => {
 
 // ── SCHEDULE EDITOR ──────────────────────────
 
-let _scheduleMode = 'auto'; // 'auto' | 'custom'
-
 // Weekday names PT
 const WEEKDAY_NAMES = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 
-function setScheduleMode(mode) {
-  _scheduleMode = mode;
-  document.getElementById('mode-btn-auto').classList.toggle('active', mode === 'auto');
-  document.getElementById('mode-btn-custom').classList.toggle('active', mode === 'custom');
-  document.getElementById('schedule-auto-panel').style.display   = mode === 'auto'   ? 'block' : 'none';
-  document.getElementById('schedule-custom-panel').style.display = mode === 'custom' ? 'block' : 'none';
-}
+
 
 // Load config from Supabase into the form
 async function loadScheduleConfig() {
@@ -2394,49 +2357,30 @@ async function loadScheduleConfig() {
     if (!data) return;
 
     const maxVal = data.max_players || 14;
-    if (data.mode === 'custom') {
-      setScheduleMode('custom');
-      document.getElementById('sch-custom-date').value    = data.custom_date  || '';
-      document.getElementById('sch-custom-start').value   = data.time_start   || '19:00';
-      document.getElementById('sch-custom-end').value     = data.time_end     || '20:00';
-      document.getElementById('sch-custom-location').value= data.location     || '';
-      document.getElementById('sch-custom-max').value     = maxVal;
-    } else {
-      setScheduleMode('auto');
-      document.getElementById('sch-weekday').value        = data.weekday ?? 5;
-      document.getElementById('sch-auto-start').value     = data.time_start   || '19:00';
-      document.getElementById('sch-auto-end').value       = data.time_end     || '20:00';
-      document.getElementById('sch-location').value       = data.location     || '';
-      document.getElementById('sch-auto-max').value       = maxVal;
-    }
+    document.getElementById('sch-weekday').value    = data.weekday ?? 5;
+    document.getElementById('sch-auto-start').value = data.time_start || '19:00';
+    document.getElementById('sch-auto-end').value   = data.time_end   || '20:00';
+    document.getElementById('sch-location').value   = data.location   || '';
+    document.getElementById('sch-auto-max').value   = maxVal;
     MAX_PLAYERS = maxVal;
   } catch(e) { console.error('loadScheduleConfig:', e); }
 }
 
 async function saveSchedule(mode) {
-  const btn = document.getElementById(mode === 'auto' ? 'btn-save-auto' : 'btn-save-custom');
+  const btn = document.getElementById('btn-save-auto');
   btn.disabled = true; btn.textContent = 'Salvando...';
 
   try {
-    let payload = { id: 1, mode };
-
-    if (mode === 'auto') {
-      payload.weekday    = parseInt(document.getElementById('sch-weekday').value);
-      payload.time_start = document.getElementById('sch-auto-start').value;
-      payload.time_end   = document.getElementById('sch-auto-end').value;
-      payload.location    = document.getElementById('sch-location').value.trim() || 'Clube Breed';
-      payload.max_players = Math.min(100, Math.max(1, parseInt(document.getElementById('sch-auto-max').value) || 14));
-      payload.custom_date = null;
-    } else {
-      const d = document.getElementById('sch-custom-date').value;
-      if (!d) { showToast('Selecione a data do jogo.'); btn.disabled=false; btn.textContent='Salvar e aplicar'; return; }
-      payload.custom_date = d;
-      payload.time_start  = document.getElementById('sch-custom-start').value;
-      payload.time_end    = document.getElementById('sch-custom-end').value;
-      payload.location    = document.getElementById('sch-custom-location').value.trim() || 'Clube Breed';
-      payload.max_players = Math.min(100, Math.max(1, parseInt(document.getElementById('sch-custom-max').value) || 14));
-      payload.weekday     = null;
-    }
+    let payload = {
+      id: 1,
+      mode: 'auto',
+      weekday:     parseInt(document.getElementById('sch-weekday').value),
+      time_start:  document.getElementById('sch-auto-start').value,
+      time_end:    document.getElementById('sch-auto-end').value,
+      location:    document.getElementById('sch-location').value.trim() || 'Clube Breed',
+      max_players: Math.min(100, Math.max(1, parseInt(document.getElementById('sch-auto-max').value) || 14)),
+      custom_date: null
+    };
 
     // Use RPC to bypass RLS (same pattern as toggleRegistrations)
     const { error } = await sbClient.rpc('save_schedule_config', { p_config: payload });
@@ -2450,7 +2394,7 @@ async function saveSchedule(mode) {
     showToast('Erro ao salvar. Verifique o console.');
   } finally {
     btn.disabled = false;
-    btn.textContent = mode === 'auto' ? 'Salvar configuração' : 'Salvar e aplicar';
+    btn.textContent = 'Salvar configuração';
   }
 }
 
@@ -2463,10 +2407,7 @@ async function getActiveGameInfo() {
     const timeEnd   = data?.time_end   || '20:00';
     const location  = data?.location   || 'Clube Breed';
 
-    if (data?.mode === 'custom' && data.custom_date) {
-      const maxPlayers = data?.max_players || 14;
-      return { dateStr: data.custom_date, timeStart, timeEnd, location, maxPlayers };
-    }
+
 
     // Auto mode: calculate next occurrence of weekday
     const weekday = data?.weekday ?? 5; // default friday
