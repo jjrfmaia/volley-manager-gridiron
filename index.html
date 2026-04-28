@@ -2442,7 +2442,8 @@ async function saveSchedule(mode) {
       payload.weekday     = null;
     }
 
-    const { error } = await sbClient.from('schedule_config').upsert(payload, { onConflict: 'id' });
+    // Use RPC to bypass RLS (same pattern as toggleRegistrations)
+    const { error } = await sbClient.rpc('save_schedule_config', { p_config: payload });
     if (error) throw error;
 
     showToast('✅ Configuração salva!');
