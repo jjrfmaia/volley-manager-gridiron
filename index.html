@@ -815,75 +815,6 @@
   }
 
 
-  /* Registration toggle */
-  .reg-toggle-card {
-    background: var(--dark2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  .reg-toggle-card.open {
-    border-color: rgba(0,230,118,.3);
-    background: rgba(0,230,118,.04);
-  }
-  .reg-toggle-card.closed {
-    border-color: rgba(255,68,68,.3);
-    background: rgba(255,68,68,.04);
-  }
-  .reg-toggle-info {}
-  .reg-toggle-label {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: var(--text-muted);
-    margin-bottom: 4px;
-  }
-  .reg-toggle-status {
-    font-size: 16px;
-    font-weight: 700;
-  }
-  .reg-toggle-status.open { color: #00e676; }
-  .reg-toggle-status.closed { color: var(--danger); }
-
-  /* Toggle switch */
-  .toggle-switch {
-    position: relative;
-    width: 52px; height: 28px;
-    flex-shrink: 0;
-  }
-  .toggle-switch input { display: none; }
-  .toggle-track {
-    position: absolute; inset: 0;
-    background: rgba(255,68,68,.25);
-    border: 1px solid rgba(255,68,68,.4);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all .25s;
-  }
-  .toggle-track::after {
-    content: '';
-    position: absolute;
-    top: 3px; left: 3px;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: var(--danger);
-    transition: all .25s;
-  }
-  .toggle-switch input:checked + .toggle-track {
-    background: rgba(0,230,118,.2);
-    border-color: rgba(0,230,118,.5);
-  }
-  .toggle-switch input:checked + .toggle-track::after {
-    background: #00e676;
-    transform: translateX(24px);
-  }
-  .toggle-switch input:disabled + .toggle-track { opacity: .5; cursor: not-allowed; }
 
 
   /* Registration toggle */
@@ -1244,18 +1175,6 @@
         <div class="sc-label">Em espera</div>
         <div class="sc-value" id="stat-waitlist">0</div>
       </div>
-    </div>
-
-    <!-- Registration Toggle -->
-    <div class="reg-toggle-card" id="reg-toggle-card">
-      <div class="reg-toggle-info">
-        <div class="reg-toggle-label">Confirmações</div>
-        <div class="reg-toggle-status" id="reg-toggle-status">Carregando...</div>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" id="reg-toggle-input" onchange="toggleRegistrations(this.checked)" />
-        <div class="toggle-track"></div>
-      </label>
     </div>
 
     <!-- Registration Toggle -->
