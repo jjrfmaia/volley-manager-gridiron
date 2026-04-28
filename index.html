@@ -1325,6 +1325,10 @@
             <label>Horário fim</label>
             <input type="time" id="sch-auto-end" value="20:00" />
           </div>
+          <div class="schedule-field">
+            <label>Vagas máximas</label>
+            <input type="number" id="sch-auto-max" value="14" min="1" max="100" placeholder="14" />
+          </div>
         </div>
         <button class="btn-save-schedule" id="btn-save-auto" onclick="saveSchedule('auto')">Salvar configuração</button>
       </div>
@@ -1347,6 +1351,10 @@
           <div class="schedule-field">
             <label>Local</label>
             <input type="text" id="sch-custom-location" placeholder="Ex: Clube Breed" />
+          </div>
+          <div class="schedule-field">
+            <label>Vagas máximas</label>
+            <input type="number" id="sch-custom-max" value="14" min="1" max="100" placeholder="14" />
           </div>
         </div>
         <button class="btn-save-schedule" id="btn-save-custom" onclick="saveSchedule('custom')">Salvar e aplicar</button>
@@ -1507,7 +1515,7 @@
 // ── CONFIG ──────────────────────────────
 const SUPABASE_URL = 'https://uemxocqagnnsbkglsanz.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlbXhvY3FhZ25uc2JrZ2xzYW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTAxOTQsImV4cCI6MjA5Mjc4NjE5NH0.TikKiOemYJsyGlWRcvjX7Vn5VHolkj0tRgHW-1RctRk';
-const MAX_PLAYERS  = 14;                           // número máximo de vagas
+let MAX_PLAYERS = 14; // loaded dynamically from schedule_config
 
 let sbClient = null;
 let currentGameId = null;
@@ -1632,7 +1640,8 @@ async function loadHomeData() {
     document.getElementById('slot-max').textContent = MAX_PLAYERS;
 
     // Load schedule config for date/time/location
-    const { dateStr, timeStart, timeEnd, location } = await getActiveGameInfo();
+    const { dateStr, timeStart, timeEnd, location, maxPlayers } = await getActiveGameInfo();
+    MAX_PLAYERS = maxPlayers;
 
     // Update date pill with weekday name
     const gameDate = new Date(dateStr + 'T12:00:00');
@@ -1930,7 +1939,8 @@ async function showAdmin(user) {
 async function loadAdminData() {
   showLoading();
   try {
-    const { dateStr, timeStart, timeEnd, location } = await getActiveGameInfo();
+    const { dateStr, timeStart, timeEnd, location, maxPlayers } = await getActiveGameInfo();
+    MAX_PLAYERS = maxPlayers;
 
     // Build clean header
     const gameDate = new Date(dateStr + 'T12:00:00');
@@ -2387,19 +2397,23 @@ async function loadScheduleConfig() {
     const { data } = await sbClient.from('schedule_config').select('*').eq('id', 1).maybeSingle();
     if (!data) return;
 
+    const maxVal = data.max_players || 14;
     if (data.mode === 'custom') {
       setScheduleMode('custom');
       document.getElementById('sch-custom-date').value    = data.custom_date  || '';
       document.getElementById('sch-custom-start').value   = data.time_start   || '19:00';
       document.getElementById('sch-custom-end').value     = data.time_end     || '20:00';
       document.getElementById('sch-custom-location').value= data.location     || '';
+      document.getElementById('sch-custom-max').value     = maxVal;
     } else {
       setScheduleMode('auto');
       document.getElementById('sch-weekday').value        = data.weekday ?? 5;
       document.getElementById('sch-auto-start').value     = data.time_start   || '19:00';
       document.getElementById('sch-auto-end').value       = data.time_end     || '20:00';
       document.getElementById('sch-location').value       = data.location     || '';
+      document.getElementById('sch-auto-max').value       = maxVal;
     }
+    MAX_PLAYERS = maxVal;
   } catch(e) { console.error('loadScheduleConfig:', e); }
 }
 
@@ -2414,7 +2428,8 @@ async function saveSchedule(mode) {
       payload.weekday    = parseInt(document.getElementById('sch-weekday').value);
       payload.time_start = document.getElementById('sch-auto-start').value;
       payload.time_end   = document.getElementById('sch-auto-end').value;
-      payload.location   = document.getElementById('sch-location').value.trim() || 'Clube Breed';
+      payload.location    = document.getElementById('sch-location').value.trim() || 'Clube Breed';
+      payload.max_players = Math.min(100, Math.max(1, parseInt(document.getElementById('sch-auto-max').value) || 14));
       payload.custom_date = null;
     } else {
       const d = document.getElementById('sch-custom-date').value;
@@ -2423,6 +2438,7 @@ async function saveSchedule(mode) {
       payload.time_start  = document.getElementById('sch-custom-start').value;
       payload.time_end    = document.getElementById('sch-custom-end').value;
       payload.location    = document.getElementById('sch-custom-location').value.trim() || 'Clube Breed';
+      payload.max_players = Math.min(100, Math.max(1, parseInt(document.getElementById('sch-custom-max').value) || 14));
       payload.weekday     = null;
     }
 
@@ -2451,7 +2467,8 @@ async function getActiveGameInfo() {
     const location  = data?.location   || 'Clube Breed';
 
     if (data?.mode === 'custom' && data.custom_date) {
-      return { dateStr: data.custom_date, timeStart, timeEnd, location };
+      const maxPlayers = data?.max_players || 14;
+      return { dateStr: data.custom_date, timeStart, timeEnd, location, maxPlayers };
     }
 
     // Auto mode: calculate next occurrence of weekday
@@ -2466,10 +2483,11 @@ async function getActiveGameInfo() {
     const y = gameDate.getFullYear();
     const m = String(gameDate.getMonth()+1).padStart(2,'0');
     const d = String(gameDate.getDate()).padStart(2,'0');
-    return { dateStr: `${y}-${m}-${d}`, timeStart, timeEnd, location };
+    const maxPlayers = data?.max_players || 14;
+    return { dateStr: `${y}-${m}-${d}`, timeStart, timeEnd, location, maxPlayers };
   } catch(e) {
     // fallback to friday
-    return { dateStr: getActiveFridayStr(), timeStart: '19:00', timeEnd: '20:00', location: 'Clube Breed' };
+    return { dateStr: getActiveFridayStr(), timeStart: '19:00', timeEnd: '20:00', location: 'Clube Breed', maxPlayers: 14 };
   }
 }
 
