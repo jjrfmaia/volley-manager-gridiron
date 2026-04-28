@@ -2200,47 +2200,60 @@ async function toggleRegistrations(isOpen) {
   try {
     const dateStr = getActiveFridayStr();
 
-    const { data: game, error: gameError } = await sbClient
+    const { data: existing, error: fetchError } = await sbClient
       .from('games')
-      .select('id, registrations_open')
+      .select('id, date, registrations_open')
       .eq('date', dateStr)
       .maybeSingle();
 
-    if (gameError) throw gameError;
+    if (fetchError) throw fetchError;
 
-    let gameId = game?.id;
+    let gameId = existing?.id;
 
     if (!gameId) {
-      const { data: created, error: insertError } = await sbClient
+      const { data: created, error: createError } = await sbClient
         .from('games')
         .insert({
           date: dateStr,
           registrations_open: isOpen
         })
-        .select('id, registrations_open')
+        .select('id, date, registrations_open')
         .single();
 
-      if (insertError) throw insertError;
+      if (createError) throw createError;
       gameId = created.id;
     } else {
       const { error: updateError } = await sbClient
         .from('games')
         .update({ registrations_open: isOpen })
-        .eq('id', gameId);
+        .eq('date', dateStr);
 
       if (updateError) throw updateError;
     }
 
     currentGameId = gameId;
-    syncToggleUI(isOpen);
+
+    const { data: saved, error: savedError } = await sbClient
+      .from('games')
+      .select('id, date, registrations_open')
+      .eq('date', dateStr)
+      .maybeSingle();
+
+    if (savedError) throw savedError;
+
+    const finalState = saved?.registrations_open === true;
+
+    syncToggleUI(finalState);
     await loadHomeData();
 
-    showToast(isOpen ? '✅ Confirmações abertas!' : '🔒 Confirmações bloqueadas');
+    showToast(finalState
+      ? '✅ Confirmações abertas!'
+      : '🔒 Confirmações bloqueadas');
   } catch (e) {
     console.error('Erro ao alterar confirmações:', e);
     input.checked = !isOpen;
     syncToggleUI(!isOpen);
-    showToast('Erro: ' + (e.message || 'falha ao atualizar'));
+    showToast('Erro ao atualizar confirmações.');
   } finally {
     input.disabled = false;
   }
