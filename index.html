@@ -981,7 +981,7 @@ const SUPABASE_URL = 'https://uemxocqagnnsbkglsanz.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlbXhvY3FhZ25uc2JrZ2xzYW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTAxOTQsImV4cCI6MjA5Mjc4NjE5NH0.TikKiOemYJsyGlWRcvjX7Vn5VHolkj0tRgHW-1RctRk';
 const MAX_PLAYERS  = 14;                           // número máximo de vagas
 
-let supabase = null;
+let sbClient = null;
 let currentGameId = null;
 let adminAttendance = [];
 
@@ -994,7 +994,12 @@ async function initSupabase() {
   try {
     // Dynamically load Supabase
     await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js');
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      throw new Error('SDK do Supabase não carregou corretamente.');
+    }
+
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const isAdmin = sessionStorage.getItem('vm_admin') === '1';
     if (isAdmin) {
@@ -1008,7 +1013,8 @@ async function initSupabase() {
   } catch(e) {
     hideLoading();
     showScreen('screen-home');
-    console.error(e);
+    console.error('Erro ao inicializar Supabase:', e);
+    setTimeout(() => showToast('⚠️ Erro de conexão. Recarregue a página.', 5000), 500);
   }
 }
 
@@ -1027,19 +1033,19 @@ async function getOrCreateCurrentGame() {
   const dateStr = friday.toISOString().split('T')[0];
 
   // Try to find existing game for this friday
-  const { data: existing } = await supabase
+  const { data: existing } = await sbClient
     .from('games').select('id').eq('date', dateStr).maybeSingle();
 
   if (existing) return existing.id;
 
   // Create new game (requires auth for RLS or public insert policy)
   // We'll use a workaround: use service key won't work anon, so try insert anyway
-  const { data: created, error } = await supabase
+  const { data: created, error } = await sbClient
     .from('games').insert({ date: dateStr }).select('id').single();
 
   if (error) {
     // Game might have been created by another user simultaneously, try fetching again
-    const { data: retry } = await supabase
+    const { data: retry } = await sbClient
       .from('games').select('id').eq('date', dateStr).maybeSingle();
     if (retry) return retry.id;
     throw error;
@@ -1071,7 +1077,7 @@ async function loadHomeData() {
     const dateStr = friday.toISOString().split('T')[0];
     document.getElementById('slot-max').textContent = MAX_PLAYERS;
 
-    const { data: game } = await supabase
+    const { data: game } = await sbClient
       .from('games').select('id').eq('date', dateStr).maybeSingle();
 
     if (!game) {
@@ -1081,7 +1087,7 @@ async function loadHomeData() {
     currentGameId = game.id;
 
     // Count confirmed (not waitlist)
-    const { count } = await supabase
+    const { count } = await sbClient
       .from('attendance')
       .select('id', { count: 'exact', head: true })
       .eq('game_id', currentGameId)
@@ -1132,6 +1138,11 @@ async function submitConfirm() {
   const errEl = document.getElementById('modal-error');
   errEl.style.display = 'none';
 
+  if (!sbClient) {
+    showError(errEl, '⚠️ Sem conexão com o servidor. Recarregue a página e tente novamente.');
+    return;
+  }
+
   if (!name) { showError(errEl, 'Por favor, insira seu nome completo.'); return; }
   if (!phone || phone.length < 8) { showError(errEl, 'Por favor, insira um telefone válido.'); return; }
 
@@ -1145,18 +1156,18 @@ async function submitConfirm() {
       const friday = getNextFriday();
       const dateStr = friday.toISOString().split('T')[0];
       // Try to get existing
-      const { data: existing } = await supabase
+      const { data: existing } = await sbClient
         .from('games').select('id').eq('date', dateStr).maybeSingle();
       if (existing) {
         gameId = existing.id;
       } else {
         // Admin needs to create game first, or we rely on a trigger/function
         // For public users, we try insert (needs public insert policy on games)
-        const { data: g, error: ge } = await supabase
+        const { data: g, error: ge } = await sbClient
           .from('games').insert({ date: dateStr }).select('id').single();
         if (ge) {
           // Try one more time to read (race condition)
-          const { data: retry } = await supabase
+          const { data: retry } = await sbClient
             .from('games').select('id').eq('date', dateStr).maybeSingle();
           if (retry) gameId = retry.id;
           else throw new Error('Não foi possível criar o jogo da semana. Tente novamente.');
@@ -1170,20 +1181,20 @@ async function submitConfirm() {
     // 2. Upsert player
     const cleanPhone = phone.replace(/\D/g, '');
     let playerId;
-    const { data: existPlayer } = await supabase
+    const { data: existPlayer } = await sbClient
       .from('players').select('id').eq('phone', cleanPhone).maybeSingle();
 
     if (existPlayer) {
       playerId = existPlayer.id;
     } else {
-      const { data: np, error: npe } = await supabase
+      const { data: np, error: npe } = await sbClient
         .from('players').insert({ name, phone: cleanPhone }).select('id').single();
       if (npe) throw npe;
       playerId = np.id;
     }
 
     // 3. Count current confirmed (non-waitlist)
-    const { count: currentCount } = await supabase
+    const { count: currentCount } = await sbClient
       .from('attendance')
       .select('id', { count: 'exact', head: true })
       .eq('game_id', gameId)
@@ -1192,7 +1203,7 @@ async function submitConfirm() {
     const isWaitlist = (currentCount || 0) >= MAX_PLAYERS;
 
     // 4. Insert attendance (ignore if already exists)
-    const { error: ae } = await supabase.from('attendance').insert({
+    const { error: ae } = await sbClient.from('attendance').insert({
       player_id: playerId,
       game_id: gameId,
       confirmed: true,
@@ -1289,21 +1300,21 @@ async function loadAdminData() {
       'Sexta-feira, ' + formatDate(dateStr) + ' · 19:00–20:00 · Clube Breed';
 
     // Get or create game
-    const { data: existing } = await supabase
+    const { data: existing } = await sbClient
       .from('games').select('id').eq('date', dateStr).maybeSingle();
 
     let gameId;
     if (existing) {
       gameId = existing.id;
     } else {
-      const { data: ng } = await supabase
+      const { data: ng } = await sbClient
         .from('games').insert({ date: dateStr }).select('id').single();
       gameId = ng?.id;
     }
     currentGameId = gameId;
 
     // Load attendance with player info
-    const { data: att } = await supabase
+    const { data: att } = await sbClient
       .from('attendance')
       .select('*, players(name, phone)')
       .eq('game_id', gameId)
@@ -1397,7 +1408,7 @@ function renderAdminTable() {
 
 async function toggleAttendance(id, field, value) {
   try {
-    const { error } = await supabase
+    const { error } = await sbClient
       .from('attendance').update({ [field]: value }).eq('id', id);
     if (error) throw error;
 
@@ -1449,7 +1460,7 @@ async function loadHistory() {
     const friday = getNextFriday();
     const dateStr = friday.toISOString().split('T')[0];
 
-    const { data: games } = await supabase
+    const { data: games } = await sbClient
       .from('games')
       .select('id, date')
       .neq('date', dateStr)
@@ -1462,7 +1473,7 @@ async function loadHistory() {
     hList.innerHTML = '';
 
     for (const g of games) {
-      const { count } = await supabase
+      const { count } = await sbClient
         .from('attendance')
         .select('id', { count: 'exact', head: true })
         .eq('game_id', g.id);
