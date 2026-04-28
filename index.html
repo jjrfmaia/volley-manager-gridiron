@@ -827,10 +827,10 @@
         <span class="accent">MANAGER</span><br>
         BREED
       </div>
-      <div class="hero-sub">Confirme sua presença e jogue na sexta.</div>
+      <div class="hero-sub" id="hero-sub-text">Confirme sua presença e jogue na sexta.</div>
 
       <div class="info-pills">
-        <div class="pill"><span class="pill-icon">📅</span> Sexta-feira</div>
+        <div class="pill"><span class="pill-icon">📅</span> <span id="pill-date">Sexta-feira</span></div>
         <div class="pill"><span class="pill-icon">⏰</span> 19:00 – 20:00</div>
         <div class="pill"><span class="pill-icon">📍</span> Clube Breed</div>
       </div>
@@ -879,7 +879,7 @@
       </div>
       <div class="field">
         <label>Telefone com DDD</label>
-        <input type="tel" id="inp-phone" placeholder="(47) 99999-9999" autocomplete="tel" />
+        <input type="tel" id="inp-phone" placeholder="(47) 99999-9999" autocomplete="tel" maxlength="15" inputmode="numeric" />
       </div>
 
       <button class="btn-confirm" id="btn-submit-confirm" onclick="submitConfirm()">
@@ -948,8 +948,11 @@
 
   <div class="admin-content">
     <div class="admin-header">
-      <h1>Jogo da Semana</h1>
+      <h1 id="admin-game-title">Jogo da Semana</h1>
       <div class="game-date" id="admin-game-date">Carregando...</div>
+      <div id="admin-game-badge" style="display:none; margin-top:10px; display:inline-flex; align-items:center; gap:8px;
+        font-size:12px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; padding:6px 14px;
+        border-radius:100px; border:1px solid; margin-top:10px;"></div>
     </div>
 
     <!-- Stats -->
@@ -1107,8 +1110,7 @@ function loadScript(src) {
 
 // ── SUPABASE HELPERS ──────────────────
 async function getOrCreateCurrentGame() {
-  const friday = getNextFriday();
-  const dateStr = friday.toISOString().split('T')[0];
+  const dateStr = getActiveFridayStr();
 
   // Try to find existing game for this friday
   const { data: existing } = await sbClient
@@ -1131,15 +1133,45 @@ async function getOrCreateCurrentGame() {
   return created.id;
 }
 
+// Retorna a sexta-feira "ativa" para confirmações.
+// Regra: a sexta atual vale até meia-noite de sexta (23:59).
+// A partir de sábado 00:00, já conta para a próxima sexta.
+// Usa data local do browser (sem depender de UTC).
 function getNextFriday() {
   const now = new Date();
-  const day = now.getDay(); // 0=Sun, 5=Fri
-  let diff = 5 - day;
-  if (diff < 0) diff += 7;
-  if (diff === 0 && now.getHours() >= 20) diff = 7; // after game time, go to next week
-  const friday = new Date(now);
-  friday.setDate(now.getDate() + diff);
+
+  // Trabalha com data local zerada (sem hora) para evitar bug de timezone
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayOfWeek = today.getDay(); // 0=Dom, 1=Seg ... 5=Sex, 6=Sab
+
+  let daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+
+  // Se hoje já é sexta (diff=0), mantém a sexta atual o dia todo
+  // A partir de sábado (diff calculado será 6), já pula pra próxima sexta
+  if (daysUntilFriday === 0) {
+    // É sexta: confirmações são para hoje
+    daysUntilFriday = 0;
+  }
+
+  const friday = new Date(today);
+  friday.setDate(today.getDate() + daysUntilFriday);
   return friday;
+}
+
+// Retorna string "2026-05-01" da sexta ativa
+function getActiveFridayStr() {
+  const f = getNextFriday();
+  const y = f.getFullYear();
+  const m = String(f.getMonth() + 1).padStart(2, '0');
+  const d = String(f.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// Retorna true se hoje é após a sexta ativa (sábado ou domingo pós-jogo)
+function isAfterCurrentGame() {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  return dayOfWeek === 6 || dayOfWeek === 0; // sábado ou domingo
 }
 
 function formatDate(dateStr) {
@@ -1151,9 +1183,28 @@ function formatDate(dateStr) {
 async function loadHomeData() {
   try {
     // We need public read on games for this
-    const friday = getNextFriday();
-    const dateStr = friday.toISOString().split('T')[0];
+    const dateStr = getActiveFridayStr();
     document.getElementById('slot-max').textContent = MAX_PLAYERS;
+
+    // Update date pill with the active friday
+    const fridayDate = new Date(dateStr + 'T12:00:00');
+    const dayNum = fridayDate.getDate();
+    const monthNames = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const monthStr = monthNames[fridayDate.getMonth()];
+    document.getElementById('pill-date').textContent = `Sex, ${dayNum} de ${monthStr}`;
+
+    // Show countdown or "hoje é dia do jogo"
+    const today = new Date();
+    const todayStr = getActiveFridayStr();
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const fridayOnly = new Date(fridayDate.getFullYear(), fridayDate.getMonth(), fridayDate.getDate());
+    const diffDays = Math.round((fridayOnly - todayDate) / 86400000);
+    const heroSub = document.getElementById('hero-sub-text');
+    if (heroSub) {
+      if (diffDays === 0) heroSub.textContent = '🏐 Hoje é dia de jogo! Confirme sua presença.';
+      else if (diffDays === 1) heroSub.textContent = 'Falta 1 dia para o jogo. Confirme sua presença!';
+      else heroSub.textContent = `Faltam ${diffDays} dias para o jogo. Confirme sua presença!`;
+    }
 
     const { data: game } = await sbClient
       .from('games').select('id').eq('date', dateStr).maybeSingle();
@@ -1210,6 +1261,56 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
 
+// ── PHONE MASK ─────────────────────────
+(function() {
+  const inp = document.getElementById('inp-phone');
+
+  inp.addEventListener('input', function(e) {
+    // Strip everything non-digit
+    let digits = this.value.replace(/\D/g, '');
+
+    // DDD obrigatório = 47, lock first 2 digits
+    if (digits.length >= 2 && digits.slice(0, 2) !== '47') {
+      digits = '47' + digits.slice(2);
+    }
+
+    // Max 11 digits: DDD (2) + 9 digits
+    if (digits.length > 11) digits = digits.slice(0, 11);
+
+    // Format: (47) XXXXX-XXXX
+    let formatted = '';
+    if (digits.length === 0) {
+      formatted = '';
+    } else if (digits.length <= 2) {
+      formatted = '(' + digits;
+    } else if (digits.length <= 7) {
+      formatted = '(' + digits.slice(0,2) + ') ' + digits.slice(2);
+    } else {
+      formatted = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+    }
+
+    this.value = formatted;
+  });
+
+  // On focus: pre-fill "(47) " if empty
+  inp.addEventListener('focus', function() {
+    if (this.value === '') this.value = '(47) ';
+  });
+
+  // On blur: clear if only the prefix was typed
+  inp.addEventListener('blur', function() {
+    if (this.value === '(47) ' || this.value === '(47') this.value = '';
+  });
+
+  // Block non-numeric keys (allow control keys)
+  inp.addEventListener('keydown', function(e) {
+    const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter'];
+    if (allowed.includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) e.preventDefault();
+  });
+})();
+
+
 async function submitConfirm() {
   const name = document.getElementById('inp-name').value.trim();
   const phone = document.getElementById('inp-phone').value.trim();
@@ -1222,7 +1323,11 @@ async function submitConfirm() {
   }
 
   if (!name) { showError(errEl, 'Por favor, insira seu nome completo.'); return; }
-  if (!phone || phone.length < 8) { showError(errEl, 'Por favor, insira um telefone válido.'); return; }
+  const phoneDigits = phone.replace(/\D/g, '');
+  if (phoneDigits.length !== 11 || phoneDigits.slice(0,2) !== '47') {
+    showError(errEl, 'Informe um celular completo com DDD 47. Ex: (47) 98447-1710');
+    return;
+  }
 
   const btn = document.getElementById('btn-submit-confirm');
   btn.disabled = true; btn.textContent = 'Confirmando...';
@@ -1231,8 +1336,7 @@ async function submitConfirm() {
     // 1. Get or create game
     let gameId = currentGameId;
     if (!gameId) {
-      const friday = getNextFriday();
-      const dateStr = friday.toISOString().split('T')[0];
+      const dateStr = getActiveFridayStr();
       // Try to get existing
       const { data: existing } = await sbClient
         .from('games').select('id').eq('date', dateStr).maybeSingle();
@@ -1372,10 +1476,35 @@ async function showAdmin(user) {
 async function loadAdminData() {
   showLoading();
   try {
-    const friday = getNextFriday();
-    const dateStr = friday.toISOString().split('T')[0];
+    const dateStr = getActiveFridayStr();
+
+    // Build clean header
+    const fridayDate = new Date(dateStr + 'T12:00:00');
+    const today = new Date();
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const fridayMid = new Date(fridayDate.getFullYear(), fridayDate.getMonth(), fridayDate.getDate());
+    const diffDays = Math.round((fridayMid - todayMid) / 86400000);
+
+    // Date line: "01 de maio de 2026 · 19:00–20:00 · Clube Breed"
+    const dateFormatted = fridayDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     document.getElementById('admin-game-date').textContent =
-      'Sexta-feira, ' + formatDate(dateStr) + ' · 19:00–20:00 · Clube Breed';
+      dateFormatted + ' · 19:00–20:00 · Clube Breed';
+
+    // Badge contextual
+    const badge = document.getElementById('admin-game-badge');
+    if (diffDays === 0) {
+      badge.textContent = '🏐 Hoje é dia de jogo';
+      badge.style.cssText += 'color:#00e676;border-color:rgba(0,230,118,.3);background:rgba(0,230,118,.07);display:inline-flex;';
+    } else if (diffDays === 1) {
+      badge.textContent = '⚡ Falta 1 dia';
+      badge.style.cssText += 'color:#D4FF00;border-color:rgba(212,255,0,.3);background:rgba(212,255,0,.06);display:inline-flex;';
+    } else if (diffDays <= 3) {
+      badge.textContent = `⏳ Faltam ${diffDays} dias`;
+      badge.style.cssText += 'color:#D4FF00;border-color:rgba(212,255,0,.2);background:rgba(212,255,0,.04);display:inline-flex;';
+    } else {
+      badge.textContent = `📅 Em ${diffDays} dias`;
+      badge.style.cssText += 'color:#888;border-color:rgba(255,255,255,.1);background:transparent;display:inline-flex;';
+    }
 
     // Get or create game
     const { data: existing } = await sbClient
@@ -1615,13 +1744,13 @@ function copyCharge() {
 
 async function loadHistory() {
   try {
-    const friday = getNextFriday();
-    const dateStr = friday.toISOString().split('T')[0];
+    const dateStr = getActiveFridayStr();
 
+    // Only past games (strictly before the active friday)
     const { data: games } = await sbClient
       .from('games')
       .select('id, date')
-      .neq('date', dateStr)
+      .lt('date', dateStr)
       .order('date', { ascending: false })
       .limit(10);
 
@@ -1636,11 +1765,26 @@ async function loadHistory() {
         .select('id', { count: 'exact', head: true })
         .eq('game_id', g.id);
 
+      // Also count confirmed (non-waitlist) separately
+      const { count: confirmedCount } = await sbClient
+        .from('attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('game_id', g.id)
+        .eq('waitlist', false);
+
+      const gameFriday = new Date(g.date + 'T12:00:00');
+      const gameDateStr = gameFriday.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+
       const item = document.createElement('div');
       item.className = 'history-item';
       item.innerHTML = `
-        <span class="hi-date">${formatDate(g.date)}</span>
-        <span class="hi-count">${count || 0} jogadores</span>
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text)">Sexta, ${gameDateStr}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:600;color:var(--volt)">${confirmedCount || 0} confirmados</div>
+          ${(count || 0) > (confirmedCount || 0) ? `<div style="font-size:11px;color:#ffa700">+${(count||0)-(confirmedCount||0)} em espera</div>` : ''}
+        </div>
       `;
       hList.appendChild(item);
     }
