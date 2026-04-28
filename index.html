@@ -2198,23 +2198,70 @@ async function toggleRegistrations(isOpen) {
   input.disabled = true;
 
   try {
-    if (!currentGameId) {
-      // Create game first if doesn't exist
-      const dateStr = getActiveFridayStr();
-      const { data: ng } = await sbClient
-        .from('games').insert({ date: dateStr, registrations_open: isOpen }).select('id').single();
-      currentGameId = ng?.id;
-    } else {
-      const { error } = await sbClient
-        .from('games').update({ registrations_open: isOpen }).eq('id', currentGameId);
-      if (error) throw error;
+    const dateStr = getActiveFridayStr();
+
+    let gameId = currentGameId;
+
+    if (!gameId) {
+      const { data: existing, error: fetchError } = await sbClient
+        .from('games')
+        .select('id, registrations_open')
+        .eq('date', dateStr)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (existing) {
+        gameId = existing.id;
+        currentGameId = existing.id;
+      }
     }
 
-    syncToggleUI(isOpen);
-    showToast(isOpen ? '✅ Confirmações abertas!' : '🔒 Confirmações bloqueadas');
-  } catch(e) {
+    if (!gameId) {
+      const { data: created, error: insertError } = await sbClient
+        .from('games')
+        .insert({
+          date: dateStr,
+          registrations_open: isOpen
+        })
+        .select('id, registrations_open')
+        .single();
+
+      if (insertError) throw insertError;
+
+      gameId = created.id;
+      currentGameId = created.id;
+    } else {
+      const { error: updateError } = await sbClient
+        .from('games')
+        .update({ registrations_open: isOpen })
+        .eq('id', gameId);
+
+      if (updateError) throw updateError;
+    }
+
+    const { data: refreshed, error: refreshError } = await sbClient
+      .from('games')
+      .select('id, registrations_open')
+      .eq('date', dateStr)
+      .maybeSingle();
+
+    if (refreshError) throw refreshError;
+
+    const finalState = refreshed?.registrations_open === true;
+
+    if (refreshed?.id) {
+      currentGameId = refreshed.id;
+    }
+
+    syncToggleUI(finalState);
+    await loadHomeData();
+
+    showToast(finalState
+      ? '✅ Confirmações abertas!'
+      : '🔒 Confirmações bloqueadas');
+  } catch (e) {
     console.error(e);
-    // Revert toggle on error
     input.checked = !isOpen;
     syncToggleUI(!isOpen);
     showToast('Erro ao atualizar. Tente novamente.');
