@@ -1974,21 +1974,17 @@ async function loadAdminData() {
     // Load schedule editor fields
     await loadScheduleConfig();
 
-    // Get or create game
+    // Only READ the game — never auto-create from admin to avoid polluting history
     const { data: existing } = await sbClient
       .from('games').select('id, registrations_open').eq('date', dateStr).maybeSingle();
 
-    let gameId;
+    let gameId = null;
     let registrationsOpen = false;
     if (existing) {
       gameId = existing.id;
       registrationsOpen = existing.registrations_open === true;
-    } else {
-      const { data: ng } = await sbClient
-        .from('games').insert({ date: dateStr, registrations_open: false }).select('id').single();
-      gameId = ng?.id;
-      registrationsOpen = false;
     }
+    // Game will be created by set_registrations_open RPC when admin opens registrations
     currentGameId = gameId;
     syncToggleUI(registrationsOpen);
 
