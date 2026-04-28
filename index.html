@@ -814,6 +814,51 @@
     color: var(--danger);
   }
 
+
+
+
+  /* Registration toggle */
+  .reg-toggle-card {
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    border: 1px solid;
+    transition: all .3s;
+  }
+  .reg-toggle-card.is-open {
+    border-color: rgba(0,230,118,.3);
+    background: rgba(0,230,118,.04);
+  }
+  .reg-toggle-card.is-closed {
+    border-color: rgba(255,68,68,.3);
+    background: rgba(255,68,68,.04);
+  }
+  .reg-toggle-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-muted); margin-bottom:4px; }
+  .reg-toggle-status { font-size:15px; font-weight:700; }
+  .reg-toggle-status.is-open  { color:#00e676; }
+  .reg-toggle-status.is-closed { color:var(--danger); }
+  .toggle-switch { position:relative; width:52px; height:28px; flex-shrink:0; cursor:pointer; }
+  .toggle-switch input { display:none; }
+  .toggle-track {
+    position:absolute; inset:0;
+    background:rgba(255,68,68,.2);
+    border:1px solid rgba(255,68,68,.4);
+    border-radius:14px;
+    transition:all .25s;
+  }
+  .toggle-track::after {
+    content:''; position:absolute; top:3px; left:3px;
+    width:20px; height:20px; border-radius:50%;
+    background:var(--danger); transition:all .25s;
+  }
+  .toggle-switch input:checked + .toggle-track { background:rgba(0,230,118,.2); border-color:rgba(0,230,118,.5); }
+  .toggle-switch input:checked + .toggle-track::after { background:#00e676; transform:translateX(24px); }
+  .toggle-switch input:disabled + .toggle-track { opacity:.5; cursor:not-allowed; }
+
   /* Delete button */
   .btn-delete {
     background: transparent;
@@ -1013,7 +1058,7 @@
       </div>
     </div>
 
-    <div class="footer-note">Volley Manager Breed · Temporada 2026 · Desenvolvido por Josué Maia</div>
+    <div class="footer-note">Volley Manager Breed · Temporada 2025</div>
   </div>
 </div>
 
@@ -1130,6 +1175,18 @@
         <div class="sc-label">Em espera</div>
         <div class="sc-value" id="stat-waitlist">0</div>
       </div>
+    </div>
+
+    <!-- Registration Toggle -->
+    <div class="reg-toggle-card is-closed" id="reg-toggle-card">
+      <div>
+        <div class="reg-toggle-label">Confirmações</div>
+        <div class="reg-toggle-status is-closed" id="reg-toggle-status">🔒 Bloqueadas</div>
+      </div>
+      <label class="toggle-switch" title="Liberar / bloquear confirmações">
+        <input type="checkbox" id="reg-toggle-input" onchange="toggleRegistrations(this.checked)" />
+        <div class="toggle-track"></div>
+      </label>
     </div>
 
     <!-- Cost Calculator -->
@@ -1421,13 +1478,17 @@ async function loadHomeData() {
     }
 
     const { data: game } = await sbClient
-      .from('games').select('id').eq('date', dateStr).maybeSingle();
+      .from('games').select('id, registrations_open').eq('date', dateStr).maybeSingle();
 
     if (!game) {
       updateSlots(0);
+      updateConfirmButtonState(false);
       return;
     }
     currentGameId = game.id;
+
+    const isOpen = game.registrations_open === true;
+    updateConfirmButtonState(isOpen);
 
     // Count confirmed (not waitlist)
     const { count } = await sbClient
@@ -1459,6 +1520,8 @@ function updateSlots(count) {
 
 // ── MODAL ──────────────────────────────
 function openModal() {
+  const btn = document.getElementById('btn-confirm-main');
+  if (btn && btn.disabled) return; // blocked
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-form-content').style.display = 'block';
   document.getElementById('modal-success').style.display = 'none';
@@ -1712,17 +1775,21 @@ async function loadAdminData() {
 
     // Get or create game
     const { data: existing } = await sbClient
-      .from('games').select('id').eq('date', dateStr).maybeSingle();
+      .from('games').select('id, registrations_open').eq('date', dateStr).maybeSingle();
 
     let gameId;
+    let registrationsOpen = false;
     if (existing) {
       gameId = existing.id;
+      registrationsOpen = existing.registrations_open === true;
     } else {
       const { data: ng } = await sbClient
-        .from('games').insert({ date: dateStr }).select('id').single();
+        .from('games').insert({ date: dateStr, registrations_open: false }).select('id').single();
       gameId = ng?.id;
+      registrationsOpen = false;
     }
     currentGameId = gameId;
+    syncToggleUI(registrationsOpen);
 
     // Load attendance with player info
     const { data: att } = await sbClient
@@ -2105,6 +2172,75 @@ async function executeDelete() {
 document.getElementById('confirm-dialog').addEventListener('click', (e) => {
   if (e.target === document.getElementById('confirm-dialog')) closeConfirmDelete();
 });
+
+
+// ── REGISTRATION TOGGLE ──────────────────
+function syncToggleUI(isOpen) {
+  const card   = document.getElementById('reg-toggle-card');
+  const status = document.getElementById('reg-toggle-status');
+  const input  = document.getElementById('reg-toggle-input');
+  if (!card) return;
+
+  input.checked = isOpen;
+  if (isOpen) {
+    card.className   = 'reg-toggle-card is-open';
+    status.className = 'reg-toggle-status is-open';
+    status.textContent = '✅ Abertas';
+  } else {
+    card.className   = 'reg-toggle-card is-closed';
+    status.className = 'reg-toggle-status is-closed';
+    status.textContent = '🔒 Bloqueadas';
+  }
+}
+
+async function toggleRegistrations(isOpen) {
+  const input = document.getElementById('reg-toggle-input');
+  input.disabled = true;
+
+  try {
+    const dateStr = getActiveFridayStr();
+
+    // Use RPC function (SECURITY DEFINER) to bypass RLS on games table
+    const { data, error } = await sbClient.rpc('set_registrations_open', {
+      p_date: dateStr,
+      p_open: isOpen
+    });
+
+    if (error) throw error;
+
+    syncToggleUI(isOpen);
+    showToast(isOpen ? '✅ Confirmações abertas!' : '🔒 Confirmações bloqueadas');
+  } catch(e) {
+    console.error('[toggleRegistrations error]', e);
+    input.checked = !isOpen;
+    syncToggleUI(!isOpen);
+    showToast('Erro ao atualizar. Tente novamente.');
+  } finally {
+    input.disabled = false;
+  }
+}
+
+function updateConfirmButtonState(isOpen) {
+  const btn     = document.getElementById('btn-confirm-main');
+  const heroSub = document.getElementById('hero-sub-text');
+  if (!btn) return;
+
+  if (!isOpen) {
+    btn.disabled = true;
+    btn.style.opacity = '.45';
+    btn.style.cursor  = 'not-allowed';
+    btn.textContent   = '🔒 Confirmações fechadas';
+    if (heroSub) heroSub.textContent = 'As confirmações para este jogo ainda não foram abertas.';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor  = 'pointer';
+    // restore original text (updateSlots may override for waitlist)
+    if (btn.textContent.includes('fechadas')) {
+      btn.innerHTML = 'Confirmar presença <span class="arrow">→</span>';
+    }
+  }
+}
 
 function calcPerPerson() {
   const total = parseFloat(document.getElementById('inp-total-cost').value) || 0;
