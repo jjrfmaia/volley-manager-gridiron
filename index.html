@@ -665,6 +665,82 @@
   .history-item .hi-date { color: var(--text-muted); font-size: 13px; }
   .history-item .hi-count { font-weight: 500; }
 
+
+  /* Delete button */
+  .btn-delete {
+    background: transparent;
+    border: 1px solid rgba(255,68,68,.25);
+    color: var(--danger);
+    border-radius: var(--radius-sm);
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .2s;
+    flex-shrink: 0;
+  }
+  .btn-delete:hover {
+    background: rgba(255,68,68,.1);
+    border-color: var(--danger);
+  }
+
+  /* Confirm delete modal */
+  .confirm-dialog {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,.85);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .confirm-dialog.open { display: flex; }
+  .confirm-box {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 100%; max-width: 360px;
+    text-align: center;
+  }
+  .confirm-box .cb-icon { font-size: 32px; margin-bottom: 12px; }
+  .confirm-box .cb-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; margin-bottom: 6px;
+  }
+  .confirm-box .cb-msg {
+    font-size: 13px; color: var(--text-muted);
+    margin-bottom: 24px; line-height: 1.5;
+  }
+  .confirm-box .cb-name {
+    color: var(--text); font-weight: 600;
+  }
+  .confirm-actions {
+    display: flex; gap: 10px;
+  }
+  .btn-cancel-del {
+    flex: 1; padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-cancel-del:hover { border-color: var(--border-bright); color: var(--text); }
+  .btn-confirm-del {
+    flex: 1; padding: 12px;
+    background: var(--danger);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-confirm-del:hover { background: #cc2222; }
+  .btn-confirm-del:disabled { opacity: .5; cursor: not-allowed; }
+
   /* Loading */
   .loading-overlay {
     position: fixed; inset: 0; z-index: 200;
@@ -930,6 +1006,7 @@
             <th>Status</th>
             <th>Presente</th>
             <th>Pago</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="players-tbody">
@@ -956,6 +1033,7 @@
             <th>Jogador</th>
             <th>Telefone</th>
             <th>Posição</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="waitlist-tbody"></tbody>
@@ -1347,7 +1425,7 @@ function renderAdminTable() {
 
   const tbody = document.getElementById('players-tbody');
   if (confirmed.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5">
+    tbody.innerHTML = `<tr><td colspan="6">
       <div class="empty-state">
         <div class="es-icon">🏐</div>
         <div class="es-text">Nenhuma confirmação ainda</div>
@@ -1383,6 +1461,9 @@ function renderAdminTable() {
               <label for="paid-${a.id}">Pago</label>
             </div>
           </td>
+          <td>
+            <button class="btn-delete" onclick="confirmDelete('${a.id}', '${escHtml(name)}', false)" title="Remover jogador">✕</button>
+          </td>
         </tr>`;
     }).join('');
   }
@@ -1399,6 +1480,7 @@ function renderAdminTable() {
         <td><div class="player-name">${escHtml(a.players?.name || '—')}</div></td>
         <td><div class="player-phone">${formatPhone(a.players?.phone || '')}</div></td>
         <td><span class="tag tag-waitlist">#${i+1} na fila</span></td>
+        <td><button class="btn-delete" onclick="confirmDelete('${a.id}', '${escHtml(a.players?.name || '')}', true)" title="Remover da lista de espera">✕</button></td>
       </tr>
     `).join('');
   }
@@ -1420,6 +1502,82 @@ async function toggleAttendance(id, field, value) {
     showToast('Erro ao atualizar');
   }
 }
+
+
+// ── DELETE ATTENDANCE ──────────────────
+let _deleteTarget = null; // { id, name, isWaitlist }
+
+function confirmDelete(id, name, isWaitlist) {
+  _deleteTarget = { id, name, isWaitlist };
+  document.getElementById('confirm-del-name').textContent = name || 'este jogador';
+
+  const promoteMsg = document.getElementById('confirm-del-promote-msg');
+  if (!isWaitlist) {
+    const waitlist = adminAttendance.filter(a => a.waitlist);
+    if (waitlist.length > 0) {
+      const nextName = waitlist[0].players?.name || 'Próximo da fila';
+      promoteMsg.textContent = `⬆️ ${nextName} será promovido(a) da lista de espera.`;
+      promoteMsg.style.display = 'inline-block';
+    } else {
+      promoteMsg.style.display = 'none';
+    }
+  } else {
+    promoteMsg.style.display = 'none';
+  }
+
+  document.getElementById('confirm-dialog').classList.add('open');
+}
+
+function closeConfirmDelete() {
+  _deleteTarget = null;
+  document.getElementById('confirm-dialog').classList.remove('open');
+}
+
+async function executeDelete() {
+  if (!_deleteTarget) return;
+  const { id, name, isWaitlist } = _deleteTarget;
+
+  const btn = document.getElementById('btn-confirm-del-ok');
+  btn.disabled = true; btn.textContent = 'Removendo...';
+
+  try {
+    const { error } = await sbClient.from('attendance').delete().eq('id', id);
+    if (error) throw error;
+
+    // Remove from local array
+    adminAttendance = adminAttendance.filter(a => a.id !== id);
+
+    // If was confirmed (not waitlist), promote first in waitlist
+    if (!isWaitlist) {
+      const firstWait = adminAttendance.find(a => a.waitlist);
+      if (firstWait) {
+        const { error: pe } = await sbClient
+          .from('attendance').update({ waitlist: false }).eq('id', firstWait.id);
+        if (!pe) {
+          firstWait.waitlist = false;
+          showToast(`✓ ${firstWait.players?.name || 'Jogador'} promovido(a) da lista de espera!`, 3500);
+        }
+      } else {
+        showToast('✓ Jogador removido');
+      }
+    } else {
+      showToast('✓ Removido da lista de espera');
+    }
+
+    renderAdminTable();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao remover jogador');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Remover';
+    closeConfirmDelete();
+  }
+}
+
+// Close dialog clicking outside
+document.getElementById('confirm-dialog').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('confirm-dialog')) closeConfirmDelete();
+});
 
 function calcPerPerson() {
   const total = parseFloat(document.getElementById('inp-total-cost').value) || 0;
@@ -1522,5 +1680,19 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
+
+<!-- CONFIRM DELETE DIALOG -->
+<div class="confirm-dialog" id="confirm-dialog">
+  <div class="confirm-box">
+    <div class="cb-icon">🗑️</div>
+    <div class="cb-title">Remover jogador?</div>
+    <div class="cb-msg">Tem certeza que deseja remover <span class="cb-name" id="confirm-del-name"></span>? Esta ação não pode ser desfeita.<br><span id="confirm-del-promote-msg" style="color:var(--volt);display:none;margin-top:6px;display:inline-block"></span></div>
+    <div class="confirm-actions">
+      <button class="btn-cancel-del" onclick="closeConfirmDelete()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-confirm-del-ok" onclick="executeDelete()">Remover</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
