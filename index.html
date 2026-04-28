@@ -1212,6 +1212,63 @@
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
+
+
+<!-- ══════════════════════════════════════
+     LIST MODAL (public confirmed list)
+══════════════════════════════════════ -->
+<div class="list-modal-overlay" id="list-modal-overlay">
+  <div class="list-modal">
+    <div class="list-modal-handle"></div>
+    <div class="list-modal-title">👥 Confirmados para o jogo</div>
+    <div class="list-modal-body" id="list-modal-body">
+      <div class="list-modal-empty">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DECONFIRM MODAL
+══════════════════════════════════════ -->
+<div class="list-modal-overlay" id="deconfirm-modal-overlay">
+  <div class="list-modal">
+    <div class="list-modal-handle"></div>
+    <div class="list-modal-title">↩ Desconfirmar presença</div>
+    <div class="list-modal-body">
+
+      <!-- Step 1: select player -->
+      <div class="deconfirm-step active" id="deconfirm-step1">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">
+          Selecione seu nome na lista de confirmados:
+        </div>
+        <div class="player-select-list" id="deconfirm-player-list">
+          <div class="list-modal-empty">Carregando...</div>
+        </div>
+        <div class="modal-error" id="deconfirm-error" style="display:none;margin-top:8px;"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button class="btn-cancel-del" onclick="closeDeconfirmModal()">Cancelar</button>
+          <button class="btn-confirm-del" id="btn-deconfirm-next" onclick="deconfirmSelected()" style="background:var(--danger)">
+            Desconfirmar
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: success -->
+      <div class="deconfirm-step" id="deconfirm-step2" style="text-align:center;padding:24px 0;">
+        <div style="font-size:40px;margin-bottom:12px;">✓</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:8px;">Presença removida</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;" id="deconfirm-success-msg">
+          Sua presença foi cancelada com sucesso.
+        </div>
+        <button class="btn-cancel-del" onclick="closeDeconfirmModal()">Fechar</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE DIALOG -->
+
 <script>
 // ── CONFIG ──────────────────────────────
 const SUPABASE_URL = 'https://uemxocqagnnsbkglsanz.supabase.co';
@@ -2164,60 +2221,6 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
-
-
-<!-- ══════════════════════════════════════
-     LIST MODAL (public confirmed list)
-══════════════════════════════════════ -->
-<div class="list-modal-overlay" id="list-modal-overlay">
-  <div class="list-modal">
-    <div class="list-modal-handle"></div>
-    <div class="list-modal-title">👥 Confirmados para o jogo</div>
-    <div class="list-modal-body" id="list-modal-body">
-      <div class="list-modal-empty">Carregando...</div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════
-     DECONFIRM MODAL
-══════════════════════════════════════ -->
-<div class="list-modal-overlay" id="deconfirm-modal-overlay">
-  <div class="list-modal">
-    <div class="list-modal-handle"></div>
-    <div class="list-modal-title">↩ Desconfirmar presença</div>
-    <div class="list-modal-body">
-
-      <!-- Step 1: select player -->
-      <div class="deconfirm-step active" id="deconfirm-step1">
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">
-          Selecione seu nome na lista de confirmados:
-        </div>
-        <div class="player-select-list" id="deconfirm-player-list">
-          <div class="list-modal-empty">Carregando...</div>
-        </div>
-        <div class="modal-error" id="deconfirm-error" style="display:none;margin-top:8px;"></div>
-        <div style="display:flex;gap:10px;margin-top:16px;">
-          <button class="btn-cancel-del" onclick="closeDeconfirmModal()">Cancelar</button>
-          <button class="btn-confirm-del" id="btn-deconfirm-next" onclick="deconfirmSelected()" style="background:var(--danger)">
-            Desconfirmar
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 2: success -->
-      <div class="deconfirm-step" id="deconfirm-step2" style="text-align:center;padding:24px 0;">
-        <div style="font-size:40px;margin-bottom:12px;">✓</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:8px;">Presença removida</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;" id="deconfirm-success-msg">
-          Sua presença foi cancelada com sucesso.
-        </div>
-        <button class="btn-cancel-del" onclick="closeDeconfirmModal()">Fechar</button>
-      </div>
-
-    </div>
-  </div>
-</div>
 
 <!-- CONFIRM DELETE DIALOG -->
 <div class="confirm-dialog" id="confirm-dialog">
