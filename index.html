@@ -817,6 +817,117 @@
 
 
 
+
+  /* Game schedule editor */
+  .schedule-card {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .schedule-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .schedule-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+  }
+  .schedule-mode-toggle {
+    display: flex;
+    gap: 6px;
+  }
+  .mode-btn {
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .mode-btn.active {
+    background: rgba(212,255,0,.1);
+    border-color: rgba(212,255,0,.4);
+    color: var(--volt);
+  }
+  .schedule-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .schedule-fields.three-col {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .schedule-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .schedule-field input, .schedule-field select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box;
+    transition: border-color .2s;
+  }
+  .schedule-field input:focus, .schedule-field select:focus {
+    outline: none;
+    border-color: var(--volt);
+  }
+  .schedule-field select option { background: #1a1a1a; }
+  .btn-save-schedule {
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px;
+    background: rgba(212,255,0,.1);
+    border: 1px solid rgba(212,255,0,.3);
+    border-radius: var(--radius-sm);
+    color: var(--volt);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-save-schedule:hover { background: rgba(212,255,0,.18); }
+  .btn-save-schedule:disabled { opacity: .5; cursor: not-allowed; }
+  .schedule-auto-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .schedule-auto-row select {
+    flex: 1;
+    padding: 10px 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
   /* Registration toggle */
   .reg-toggle-card {
     border-radius: var(--radius);
@@ -1024,8 +1135,8 @@
 
       <div class="info-pills">
         <div class="pill"><span class="pill-icon">📅</span> <span id="pill-date">Sexta-feira</span></div>
-        <div class="pill"><span class="pill-icon">⏰</span> 19:00 – 20:00</div>
-        <div class="pill"><span class="pill-icon">📍</span> Clube Breed</div>
+        <div class="pill"><span class="pill-icon">⏰</span> <span id="pill-time">19:00 – 20:00</span></div>
+        <div class="pill"><span class="pill-icon">📍</span> <span id="pill-location">Clube Breed</span></div>
       </div>
 
       <div class="slot-bar">
@@ -1174,6 +1285,71 @@
       <div class="stat-card">
         <div class="sc-label">Em espera</div>
         <div class="sc-value" id="stat-waitlist">0</div>
+      </div>
+    </div>
+
+    <!-- Schedule Editor -->
+    <div class="schedule-card" id="schedule-card">
+      <div class="schedule-card-header">
+        <div class="schedule-card-title">📅 Configurar Jogo</div>
+        <div class="schedule-mode-toggle">
+          <button class="mode-btn active" id="mode-btn-auto" onclick="setScheduleMode('auto')">Automático</button>
+          <button class="mode-btn" id="mode-btn-custom" onclick="setScheduleMode('custom')">Personalizado</button>
+        </div>
+      </div>
+
+      <!-- Auto mode -->
+      <div id="schedule-auto-panel">
+        <div class="schedule-fields">
+          <div class="schedule-field">
+            <label>Dia da semana</label>
+            <select id="sch-weekday">
+              <option value="0">Domingo</option>
+              <option value="1">Segunda-feira</option>
+              <option value="2">Terça-feira</option>
+              <option value="3">Quarta-feira</option>
+              <option value="4">Quinta-feira</option>
+              <option value="5" selected>Sexta-feira</option>
+              <option value="6">Sábado</option>
+            </select>
+          </div>
+          <div class="schedule-field">
+            <label>Local</label>
+            <input type="text" id="sch-location" placeholder="Ex: Clube Breed" />
+          </div>
+          <div class="schedule-field">
+            <label>Horário início</label>
+            <input type="time" id="sch-auto-start" value="19:00" />
+          </div>
+          <div class="schedule-field">
+            <label>Horário fim</label>
+            <input type="time" id="sch-auto-end" value="20:00" />
+          </div>
+        </div>
+        <button class="btn-save-schedule" id="btn-save-auto" onclick="saveSchedule('auto')">Salvar configuração</button>
+      </div>
+
+      <!-- Custom mode -->
+      <div id="schedule-custom-panel" style="display:none">
+        <div class="schedule-fields three-col">
+          <div class="schedule-field" style="grid-column:span 3">
+            <label>Data do jogo</label>
+            <input type="date" id="sch-custom-date" />
+          </div>
+          <div class="schedule-field">
+            <label>Horário início</label>
+            <input type="time" id="sch-custom-start" value="19:00" />
+          </div>
+          <div class="schedule-field">
+            <label>Horário fim</label>
+            <input type="time" id="sch-custom-end" value="20:00" />
+          </div>
+          <div class="schedule-field">
+            <label>Local</label>
+            <input type="text" id="sch-custom-location" placeholder="Ex: Clube Breed" />
+          </div>
+        </div>
+        <button class="btn-save-schedule" id="btn-save-custom" onclick="saveSchedule('custom')">Salvar e aplicar</button>
       </div>
     </div>
 
@@ -1453,28 +1629,39 @@ function formatDate(dateStr) {
 // ── HOME ──────────────────────────────
 async function loadHomeData() {
   try {
-    // We need public read on games for this
-    const dateStr = getActiveFridayStr();
     document.getElementById('slot-max').textContent = MAX_PLAYERS;
 
-    // Update date pill with the active friday
-    const fridayDate = new Date(dateStr + 'T12:00:00');
-    const dayNum = fridayDate.getDate();
-    const monthNames = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-    const monthStr = monthNames[fridayDate.getMonth()];
-    document.getElementById('pill-date').textContent = `Sex, ${dayNum} de ${monthStr}`;
+    // Load schedule config for date/time/location
+    const { dateStr, timeStart, timeEnd, location } = await getActiveGameInfo();
 
-    // Show countdown or "hoje é dia do jogo"
+    // Update date pill with weekday name
+    const gameDate = new Date(dateStr + 'T12:00:00');
+    const dayNum = gameDate.getDate();
+    const monthNames = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const monthStr = monthNames[gameDate.getMonth()];
+    const weekdayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const weekdayStr = weekdayNames[gameDate.getDay()];
+    document.getElementById('pill-date').textContent = `${weekdayStr}, ${dayNum} de ${monthStr}`;
+
+    // Update time pill
+    const pillTime = document.getElementById('pill-time');
+    if (pillTime) pillTime.textContent = `${timeStart} – ${timeEnd}`;
+
+    // Update location pill
+    const pillLocation = document.getElementById('pill-location');
+    if (pillLocation) pillLocation.textContent = location;
+
+    // Show countdown
     const today = new Date();
-    const todayStr = getActiveFridayStr();
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const fridayOnly = new Date(fridayDate.getFullYear(), fridayDate.getMonth(), fridayDate.getDate());
-    const diffDays = Math.round((fridayOnly - todayDate) / 86400000);
-    const heroSub = document.getElementById('hero-sub-text');
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const gameMid  = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate());
+    const diffDays = Math.round((gameMid - todayMid) / 86400000);
+    const heroSub  = document.getElementById('hero-sub-text');
     if (heroSub) {
       if (diffDays === 0) heroSub.textContent = '🏐 Hoje é dia de jogo! Confirme sua presença.';
       else if (diffDays === 1) heroSub.textContent = 'Falta 1 dia para o jogo. Confirme sua presença!';
-      else heroSub.textContent = `Faltam ${diffDays} dias para o jogo. Confirme sua presença!`;
+      else if (diffDays > 0) heroSub.textContent = `Faltam ${diffDays} dias para o jogo. Confirme sua presença!`;
+      else heroSub.textContent = 'Confirme sua presença e jogue!';
     }
 
     const { data: game } = await sbClient
@@ -1743,19 +1930,20 @@ async function showAdmin(user) {
 async function loadAdminData() {
   showLoading();
   try {
-    const dateStr = getActiveFridayStr();
+    const { dateStr, timeStart, timeEnd, location } = await getActiveGameInfo();
 
     // Build clean header
-    const fridayDate = new Date(dateStr + 'T12:00:00');
-    const today = new Date();
+    const gameDate = new Date(dateStr + 'T12:00:00');
+    const today    = new Date();
     const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const fridayMid = new Date(fridayDate.getFullYear(), fridayDate.getMonth(), fridayDate.getDate());
-    const diffDays = Math.round((fridayMid - todayMid) / 86400000);
+    const gameMid  = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate());
+    const diffDays = Math.round((gameMid - todayMid) / 86400000);
+    const weekdayFull = gameDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+    const weekdayCap  = weekdayFull.charAt(0).toUpperCase() + weekdayFull.slice(1);
 
-    // Date line: "01 de maio de 2026 · 19:00–20:00 · Clube Breed"
-    const dateFormatted = fridayDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const dateFormatted = gameDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     document.getElementById('admin-game-date').textContent =
-      dateFormatted + ' · 19:00–20:00 · Clube Breed';
+      `${weekdayCap}, ${dateFormatted} · ${timeStart}–${timeEnd} · ${location}`;
 
     // Badge contextual
     const badge = document.getElementById('admin-game-badge');
@@ -1772,6 +1960,9 @@ async function loadAdminData() {
       badge.textContent = `📅 Em ${diffDays} dias`;
       badge.style.cssText += 'color:#888;border-color:rgba(255,255,255,.1);background:transparent;display:inline-flex;';
     }
+
+    // Load schedule editor fields
+    await loadScheduleConfig();
 
     // Get or create game
     const { data: existing } = await sbClient
@@ -2173,6 +2364,114 @@ document.getElementById('confirm-dialog').addEventListener('click', (e) => {
   if (e.target === document.getElementById('confirm-dialog')) closeConfirmDelete();
 });
 
+
+
+// ── SCHEDULE EDITOR ──────────────────────────
+
+let _scheduleMode = 'auto'; // 'auto' | 'custom'
+
+// Weekday names PT
+const WEEKDAY_NAMES = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+function setScheduleMode(mode) {
+  _scheduleMode = mode;
+  document.getElementById('mode-btn-auto').classList.toggle('active', mode === 'auto');
+  document.getElementById('mode-btn-custom').classList.toggle('active', mode === 'custom');
+  document.getElementById('schedule-auto-panel').style.display   = mode === 'auto'   ? 'block' : 'none';
+  document.getElementById('schedule-custom-panel').style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+// Load config from Supabase into the form
+async function loadScheduleConfig() {
+  try {
+    const { data } = await sbClient.from('schedule_config').select('*').eq('id', 1).maybeSingle();
+    if (!data) return;
+
+    if (data.mode === 'custom') {
+      setScheduleMode('custom');
+      document.getElementById('sch-custom-date').value    = data.custom_date  || '';
+      document.getElementById('sch-custom-start').value   = data.time_start   || '19:00';
+      document.getElementById('sch-custom-end').value     = data.time_end     || '20:00';
+      document.getElementById('sch-custom-location').value= data.location     || '';
+    } else {
+      setScheduleMode('auto');
+      document.getElementById('sch-weekday').value        = data.weekday ?? 5;
+      document.getElementById('sch-auto-start').value     = data.time_start   || '19:00';
+      document.getElementById('sch-auto-end').value       = data.time_end     || '20:00';
+      document.getElementById('sch-location').value       = data.location     || '';
+    }
+  } catch(e) { console.error('loadScheduleConfig:', e); }
+}
+
+async function saveSchedule(mode) {
+  const btn = document.getElementById(mode === 'auto' ? 'btn-save-auto' : 'btn-save-custom');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    let payload = { id: 1, mode };
+
+    if (mode === 'auto') {
+      payload.weekday    = parseInt(document.getElementById('sch-weekday').value);
+      payload.time_start = document.getElementById('sch-auto-start').value;
+      payload.time_end   = document.getElementById('sch-auto-end').value;
+      payload.location   = document.getElementById('sch-location').value.trim() || 'Clube Breed';
+      payload.custom_date = null;
+    } else {
+      const d = document.getElementById('sch-custom-date').value;
+      if (!d) { showToast('Selecione a data do jogo.'); btn.disabled=false; btn.textContent='Salvar e aplicar'; return; }
+      payload.custom_date = d;
+      payload.time_start  = document.getElementById('sch-custom-start').value;
+      payload.time_end    = document.getElementById('sch-custom-end').value;
+      payload.location    = document.getElementById('sch-custom-location').value.trim() || 'Clube Breed';
+      payload.weekday     = null;
+    }
+
+    const { error } = await sbClient.from('schedule_config').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+
+    showToast('✅ Configuração salva!');
+    // Refresh admin header
+    await loadAdminData();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao salvar. Verifique o console.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = mode === 'auto' ? 'Salvar configuração' : 'Salvar e aplicar';
+  }
+}
+
+// Returns { dateStr, timeStart, timeEnd, location } based on current config
+async function getActiveGameInfo() {
+  try {
+    const { data } = await sbClient.from('schedule_config').select('*').eq('id', 1).maybeSingle();
+
+    const timeStart = data?.time_start || '19:00';
+    const timeEnd   = data?.time_end   || '20:00';
+    const location  = data?.location   || 'Clube Breed';
+
+    if (data?.mode === 'custom' && data.custom_date) {
+      return { dateStr: data.custom_date, timeStart, timeEnd, location };
+    }
+
+    // Auto mode: calculate next occurrence of weekday
+    const weekday = data?.weekday ?? 5; // default friday
+    const today   = new Date();
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayDay = todayMid.getDay();
+    let diff = (weekday - todayDay + 7) % 7;
+    if (diff === 0) diff = 0; // today is game day
+    const gameDate = new Date(todayMid);
+    gameDate.setDate(todayMid.getDate() + diff);
+    const y = gameDate.getFullYear();
+    const m = String(gameDate.getMonth()+1).padStart(2,'0');
+    const d = String(gameDate.getDate()).padStart(2,'0');
+    return { dateStr: `${y}-${m}-${d}`, timeStart, timeEnd, location };
+  } catch(e) {
+    // fallback to friday
+    return { dateStr: getActiveFridayStr(), timeStart: '19:00', timeEnd: '20:00', location: 'Clube Breed' };
+  }
+}
 
 // ── REGISTRATION TOGGLE ──────────────────
 function syncToggleUI(isOpen) {
