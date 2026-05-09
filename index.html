@@ -1721,6 +1721,30 @@
   </div>
 </div>
 
+
+<!-- HISTORY EDIT MODAL -->
+<div class="edit-name-overlay" id="history-edit-overlay">
+  <div class="edit-name-box">
+    <div class="enb-title">✏️ Editar presença</div>
+    <div class="enb-sub" id="hedit-name" style="color:var(--text);font-size:15px;font-weight:600;margin-bottom:20px;"></div>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;">
+      <input type="checkbox" id="hedit-present" style="width:17px;height:17px;accent-color:var(--volt);" />
+      <span>Presente</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer;font-size:14px;">
+      <input type="checkbox" id="hedit-paid" style="width:17px;height:17px;accent-color:var(--volt);" />
+      <span>Pago</span>
+    </label>
+    <div class="edit-name-actions">
+      <button class="btn-cancel-del" onclick="closeHistoryEdit()">Cancelar</button>
+      <button class="btn-cancel-del" onclick="deleteHistoryAttendance()"
+        style="border-color:rgba(255,68,68,.3);color:var(--danger);">🗑️ Excluir</button>
+      <button class="btn-confirm-del" id="btn-hedit-save" onclick="saveHistoryEdit()"
+        style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM DELETE DIALOG -->
 
 <script>
@@ -2860,6 +2884,7 @@ document.getElementById('edit-phone-overlay').addEventListener('click', (e) => {
 
 // ── DELETE ATTENDANCE ──────────────────
 let _deleteTarget = null; // { id, name, isWaitlist }
+let _historyEditId = null;
 
 function confirmDelete(id, name, isWaitlist) {
   _deleteTarget = { id, name, isWaitlist };
@@ -3213,65 +3238,63 @@ function toggleHistoryDetail(panelId) {
 }
 
 // ── HISTORY EDIT ──────────────────────────
-let _historyEditId = null;
-
 function openHistoryEdit(attendanceId, name, present, paid) {
   _historyEditId = attendanceId;
-
-  // Reuse confirm-dialog as a quick edit modal
-  const box = document.getElementById('confirm-dialog');
-  box.querySelector('.cb-icon').textContent = '✏️';
-  box.querySelector('.cb-title').textContent = 'Editar presença';
-  box.querySelector('.cb-msg').innerHTML = `
-    <span class="cb-name">${escHtml(name)}</span><br><br>
-    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;">
-      <input type="checkbox" id="hedit-present" ${present ? 'checked' : ''} style="width:16px;height:16px;" />
-      <span>Marcado como presente</span>
-    </label>
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="hedit-paid" ${paid ? 'checked' : ''} style="width:16px;height:16px;" />
-      <span>Marcado como pago</span>
-    </label>
-  `;
-  box.querySelector('.btn-cancel-del').textContent = 'Cancelar';
-  box.querySelector('.btn-cancel-del').onclick = closeHistoryEdit;
-  box.querySelector('.btn-confirm-del').textContent = 'Salvar';
-  box.querySelector('.btn-confirm-del').onclick = saveHistoryEdit;
-  box.querySelector('.btn-confirm-del').style.background = 'var(--volt)';
-  box.querySelector('.btn-confirm-del').style.color = '#000';
-  box.classList.add('open');
+  document.getElementById('hedit-name').textContent = name || '—';
+  document.getElementById('hedit-present').checked = present;
+  document.getElementById('hedit-paid').checked = paid;
+  document.getElementById('history-edit-overlay').classList.add('open');
 }
 
 function closeHistoryEdit() {
   _historyEditId = null;
-  // Restore confirm dialog defaults
-  const box = document.getElementById('confirm-dialog');
-  box.classList.remove('open');
-  box.querySelector('.btn-confirm-del').style.background = 'var(--danger)';
-  box.querySelector('.btn-confirm-del').style.color = '#fff';
-  box.querySelector('.btn-confirm-del').onclick = executeDelete;
+  document.getElementById('history-edit-overlay').classList.remove('open');
 }
 
 async function saveHistoryEdit() {
   if (!_historyEditId) return;
   const present = document.getElementById('hedit-present').checked;
   const paid    = document.getElementById('hedit-paid').checked;
-  const btn     = document.getElementById('confirm-dialog').querySelector('.btn-confirm-del');
+  const btn     = document.getElementById('btn-hedit-save');
   btn.disabled = true; btn.textContent = 'Salvando...';
-
   try {
     const { error } = await sbClient
       .from('attendance').update({ present, paid }).eq('id', _historyEditId);
     if (error) throw error;
     showToast('✓ Presença atualizada!');
     closeHistoryEdit();
-    await loadHistory(); // refresh
+    await loadHistory();
   } catch(e) {
     console.error(e);
     showToast('Erro ao salvar.');
+  } finally {
     btn.disabled = false; btn.textContent = 'Salvar';
   }
 }
+
+async function deleteHistoryAttendance() {
+  if (!_historyEditId) return;
+  const name = document.getElementById('hedit-name').textContent;
+  if (!confirm(`Remover "${name}" deste jogo do histórico?`)) return;
+  const btn = document.getElementById('btn-hedit-save');
+  btn.disabled = true;
+  try {
+    const { error } = await sbClient.from('attendance').delete().eq('id', _historyEditId);
+    if (error) throw error;
+    showToast('✓ Registro removido.');
+    closeHistoryEdit();
+    await loadHistory();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao remover.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('history-edit-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('history-edit-overlay')) closeHistoryEdit();
+});
 
 function toggleHistory(btn) {
   const list = document.getElementById('history-list');
@@ -3334,6 +3357,30 @@ function escHtml(s) {
     <div class="edit-name-actions">
       <button class="btn-cancel-del" onclick="closeEditPhone()">Cancelar</button>
       <button class="btn-confirm-del" id="btn-edit-phone-save" onclick="saveEditPhone()"
+        style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- HISTORY EDIT MODAL -->
+<div class="edit-name-overlay" id="history-edit-overlay">
+  <div class="edit-name-box">
+    <div class="enb-title">✏️ Editar presença</div>
+    <div class="enb-sub" id="hedit-name" style="color:var(--text);font-size:15px;font-weight:600;margin-bottom:20px;"></div>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;">
+      <input type="checkbox" id="hedit-present" style="width:17px;height:17px;accent-color:var(--volt);" />
+      <span>Presente</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer;font-size:14px;">
+      <input type="checkbox" id="hedit-paid" style="width:17px;height:17px;accent-color:var(--volt);" />
+      <span>Pago</span>
+    </label>
+    <div class="edit-name-actions">
+      <button class="btn-cancel-del" onclick="closeHistoryEdit()">Cancelar</button>
+      <button class="btn-cancel-del" onclick="deleteHistoryAttendance()"
+        style="border-color:rgba(255,68,68,.3);color:var(--danger);">🗑️ Excluir</button>
+      <button class="btn-confirm-del" id="btn-hedit-save" onclick="saveHistoryEdit()"
         style="background:var(--volt);color:#000;">Salvar</button>
     </div>
   </div>
