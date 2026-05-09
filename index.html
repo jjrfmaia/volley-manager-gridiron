@@ -926,6 +926,121 @@
     font-family: 'DM Sans', sans-serif;
   }
 
+
+  /* Players screen */
+  #screen-players { padding: 0; }
+  .players-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--dark1);
+    z-index: 10;
+  }
+  .players-nav-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 1px;
+  }
+  .players-content { padding: 20px; max-width: 600px; margin: 0 auto; }
+  .players-search {
+    width: 100%;
+    padding: 11px 14px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+    transition: border-color .2s;
+  }
+  .players-search:focus { outline: none; border-color: var(--volt); }
+  .players-search::placeholder { color: var(--text-faint); }
+  .player-card {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .player-card-info { flex: 1; min-width: 0; }
+  .player-card-name {
+    font-size: 15px; font-weight: 600;
+    color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .player-card-phone {
+    font-size: 12px; color: var(--text-muted); margin-top: 3px;
+  }
+  .player-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-player-edit {
+    padding: 7px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+  .btn-player-edit:hover { border-color: var(--volt); color: var(--volt); }
+  .players-empty {
+    text-align: center; color: var(--text-muted);
+    font-size: 14px; padding: 48px 0;
+  }
+  .players-count {
+    font-size: 12px; color: var(--text-muted);
+    margin-bottom: 12px; text-align: right;
+  }
+
+  /* Edit player full modal */
+  .edit-player-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,.88);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .edit-player-overlay.open { display: flex; }
+  .edit-player-box {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 100%; max-width: 380px;
+  }
+  .edit-player-box .epb-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; margin-bottom: 20px;
+  }
+  .epb-field { margin-bottom: 14px; }
+  .epb-field label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: var(--text-muted); margin-bottom: 6px;
+  }
+  .epb-field input {
+    width: 100%; padding: 11px 14px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text); font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box; transition: border-color .2s;
+  }
+  .epb-field input:focus { outline: none; border-color: var(--volt); }
+  .epb-error { display:none; color:var(--danger); font-size:12px; margin-bottom:10px; }
+
   /* Registration toggle */
   .reg-toggle-card {
     border-radius: var(--radius);
@@ -1311,6 +1426,7 @@
     <div class="admin-nav-logo">⚡ Volley Manager Admin</div>
     <div class="admin-nav-right">
       <span style="font-size:12px;color:var(--text-muted)" id="admin-user-label"></span>
+      <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="showPlayersScreen()">👥 Jogadores</button>
       <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="doLogout()">Sair</button>
     </div>
   </nav>
@@ -2431,6 +2547,162 @@ document.getElementById('edit-name-overlay').addEventListener('click', (e) => {
 });
 
 
+
+// ── PLAYERS SCREEN ──────────────────────────
+let _allPlayers = [];
+let _editingPlayer = null;
+
+async function showPlayersScreen() {
+  showScreen('screen-players');
+  await loadAllPlayers();
+}
+
+async function loadAllPlayers() {
+  const list = document.getElementById('players-list');
+  list.innerHTML = '<div class="players-empty">Carregando...</div>';
+
+  try {
+    const { data, error } = await sbClient
+      .from('players')
+      .select('id, name, phone')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    _allPlayers = data || [];
+    renderPlayersList(_allPlayers);
+  } catch(e) {
+    console.error(e);
+    list.innerHTML = '<div class="players-empty">Erro ao carregar jogadores.</div>';
+  }
+}
+
+function filterPlayers(query) {
+  if (!query.trim()) {
+    renderPlayersList(_allPlayers);
+    return;
+  }
+  const q = query.toLowerCase();
+  const filtered = _allPlayers.filter(p =>
+    (p.name || '').toLowerCase().includes(q) ||
+    (p.phone || '').includes(q.replace(/\D/g, ''))
+  );
+  renderPlayersList(filtered);
+}
+
+function renderPlayersList(players) {
+  const list  = document.getElementById('players-list');
+  const count = document.getElementById('players-count');
+  count.textContent = `${players.length} jogador${players.length !== 1 ? 'es' : ''} cadastrado${players.length !== 1 ? 's' : ''}`;
+
+  if (players.length === 0) {
+    list.innerHTML = '<div class="players-empty">Nenhum jogador encontrado.</div>';
+    return;
+  }
+
+  list.innerHTML = players.map(p => `
+    <div class="player-card" id="pcard-${p.id}">
+      <div class="player-card-info">
+        <div class="player-card-name">${escHtml(p.name || '—')}</div>
+        <div class="player-card-phone">${formatPhone(p.phone || '')}</div>
+      </div>
+      <div class="player-card-actions">
+        <button class="btn-player-edit" onclick="openEditPlayer('${p.id}', '${escHtml(p.name || '')}', '${p.phone || ''}')">
+          ✏️ Editar
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openEditPlayer(id, name, phone) {
+  _editingPlayer = { id, name, phone };
+  document.getElementById('epb-name').value = name || '';
+
+  // Format phone for display
+  const digits = (phone || '').replace(/\D/g, '');
+  let fmt = '';
+  if (digits.length <= 2) fmt = digits ? '(' + digits : '';
+  else if (digits.length <= 7) fmt = '(' + digits.slice(0,2) + ') ' + digits.slice(2);
+  else fmt = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+  document.getElementById('epb-phone').value = fmt;
+
+  document.getElementById('epb-error').style.display = 'none';
+  document.getElementById('edit-player-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('epb-name').focus(), 100);
+}
+
+function closeEditPlayer() {
+  _editingPlayer = null;
+  document.getElementById('edit-player-overlay').classList.remove('open');
+}
+
+async function saveEditPlayer() {
+  const name   = document.getElementById('epb-name').value.trim();
+  const digits = document.getElementById('epb-phone').value.replace(/\D/g, '');
+  const errEl  = document.getElementById('epb-error');
+  errEl.style.display = 'none';
+
+  if (!name) { errEl.textContent = 'O nome não pode ficar vazio.'; errEl.style.display = 'block'; return; }
+  if (digits.length !== 11) { errEl.textContent = 'Informe o telefone completo com DDD.'; errEl.style.display = 'block'; return; }
+  if (!_editingPlayer) return;
+
+  const btn = document.getElementById('btn-epb-save');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { data: updData, error } = await sbClient
+      .from('players')
+      .update({ name, phone: digits })
+      .eq('id', _editingPlayer.id)
+      .select();
+
+    if (error) throw error;
+    if (!updData || updData.length === 0) throw new Error('RLS bloqueou o update.');
+
+    // Update local list
+    const idx = _allPlayers.findIndex(p => p.id === _editingPlayer.id);
+    if (idx !== -1) { _allPlayers[idx].name = name; _allPlayers[idx].phone = digits; }
+
+    const query = document.getElementById('players-search-input').value;
+    filterPlayers(query);
+
+    showToast('✓ Jogador atualizado!');
+    closeEditPlayer();
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'Erro ao salvar. Tente novamente.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
+}
+
+// Phone mask for edit player modal
+(function() {
+  const inp = document.getElementById('epb-phone');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    let d = this.value.replace(/\D/g, '');
+    if (d.length > 11) d = d.slice(0, 11);
+    let f = '';
+    if (d.length === 0) f = '';
+    else if (d.length <= 2) f = '(' + d;
+    else if (d.length <= 7) f = '(' + d.slice(0,2) + ') ' + d.slice(2);
+    else f = '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7);
+    this.value = f;
+  });
+  inp.addEventListener('keydown', function(e) {
+    const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter'];
+    if (allowed.includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) e.preventDefault();
+  });
+})();
+
+document.getElementById('edit-player-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('edit-player-overlay')) closeEditPlayer();
+});
+
 // ── EDIT PLAYER PHONE ──────────────────────
 let _editPhonePlayerId = null;
 
@@ -2910,6 +3182,46 @@ function escHtml(s) {
     <div class="confirm-actions">
       <button class="btn-cancel-del" onclick="closeConfirmDelete()">Cancelar</button>
       <button class="btn-confirm-del" id="btn-confirm-del-ok" onclick="executeDelete()">Remover</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     PLAYERS SCREEN
+══════════════════════════════════════ -->
+<div class="screen" id="screen-players">
+  <nav class="players-nav">
+    <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="showScreen('screen-admin')">← Voltar</button>
+    <div class="players-nav-title">👥 Jogadores</div>
+    <div style="width:70px"></div>
+  </nav>
+  <div class="players-content">
+    <input type="search" class="players-search" id="players-search-input"
+      placeholder="🔍 Buscar por nome ou telefone..."
+      oninput="filterPlayers(this.value)" />
+    <div class="players-count" id="players-count"></div>
+    <div id="players-list"></div>
+  </div>
+</div>
+
+<!-- EDIT PLAYER FULL MODAL -->
+<div class="edit-player-overlay" id="edit-player-overlay">
+  <div class="edit-player-box">
+    <div class="epb-title">✏️ Editar jogador</div>
+    <div class="epb-field">
+      <label>Nome completo</label>
+      <input type="text" id="epb-name" placeholder="Nome completo" maxlength="80" />
+    </div>
+    <div class="epb-field">
+      <label>Telefone</label>
+      <input type="tel" id="epb-phone" placeholder="(47) 99999-9999" maxlength="15" inputmode="numeric" />
+    </div>
+    <div class="epb-error" id="epb-error"></div>
+    <div class="edit-name-actions" style="margin-top:8px;">
+      <button class="btn-cancel-del" onclick="closeEditPlayer()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-epb-save" onclick="saveEditPlayer()"
+        style="background:var(--volt);color:#000;">Salvar</button>
     </div>
   </div>
 </div>
