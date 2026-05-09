@@ -2516,7 +2516,7 @@ document.getElementById('list-modal-overlay').addEventListener('click', (e) => {
 });
 
 // ── DECONFIRM MODAL ──────────────────────────
-let _deconfirmSelectedId = null;
+var _deconfirmSelectedId = null;
 
 async function openDeconfirmModal() {
   _deconfirmSelectedId = null;
@@ -2645,7 +2645,7 @@ document.getElementById('deconfirm-modal-overlay').addEventListener('click', (e)
 
 
 // ── EDIT PLAYER NAME ──────────────────────
-let _editPlayerId = null;
+var _editPlayerId = null;
 
 function openEditName(playerId, currentName) {
   _editPlayerId = playerId;
@@ -2883,8 +2883,8 @@ document.getElementById('cash-modal-overlay').addEventListener('click', (e) => {
 });
 
 // ── PLAYERS SCREEN ──────────────────────────
-let _allPlayers = [];
-let _editingPlayer = null;
+var _allPlayers = [];
+var _editingPlayer = null;
 
 async function showPlayersScreen() {
   showScreen('screen-players');
@@ -3065,7 +3065,7 @@ document.getElementById('edit-player-overlay').addEventListener('click', (e) => 
 });
 
 // ── EDIT PLAYER PHONE ──────────────────────
-let _editPhonePlayerId = null;
+var _editPhonePlayerId = null;
 
 function openEditPhone(playerId, currentPhone) {
   _editPhonePlayerId = playerId;
