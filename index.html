@@ -968,6 +968,61 @@
   .toggle-switch input:checked + .toggle-track::after { background:#00e676; transform:translateX(24px); }
   .toggle-switch input:disabled + .toggle-track { opacity:.5; cursor:not-allowed; }
 
+
+  /* Edit name */
+  .btn-edit-name {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 4px;
+    margin-left: 6px;
+    opacity: .5;
+    transition: opacity .2s;
+    vertical-align: middle;
+  }
+  .btn-edit-name:hover { opacity: 1; color: var(--volt); }
+
+  /* Edit inline modal */
+  .edit-name-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,.85);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .edit-name-overlay.open { display: flex; }
+  .edit-name-box {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 100%; max-width: 360px;
+  }
+  .edit-name-box .enb-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; margin-bottom: 6px;
+  }
+  .edit-name-box .enb-sub {
+    font-size: 12px; color: var(--text-muted); margin-bottom: 20px;
+  }
+  .edit-name-box input {
+    width: 100%; padding: 12px 14px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+    transition: border-color .2s;
+  }
+  .edit-name-box input:focus { outline: none; border-color: var(--volt); }
+  .edit-name-actions { display: flex; gap: 10px; }
+
   /* Delete button */
   .btn-delete {
     background: transparent;
@@ -1476,6 +1531,22 @@
         <button class="btn-cancel-del" onclick="closeDeconfirmModal()">Fechar</button>
       </div>
 
+    </div>
+  </div>
+</div>
+
+
+<!-- EDIT NAME DIALOG -->
+<div class="edit-name-overlay" id="edit-name-overlay">
+  <div class="edit-name-box">
+    <div class="enb-title">✏️ Editar nome</div>
+    <div class="enb-sub" id="edit-name-sub">Alteração salva no cadastro do jogador.</div>
+    <input type="text" id="edit-name-input" placeholder="Nome completo" maxlength="80" />
+    <div id="edit-name-error" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;"></div>
+    <div class="edit-name-actions">
+      <button class="btn-cancel-del" onclick="closeEditName()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-edit-name-save" onclick="saveEditName()"
+        style="background:var(--volt);color:#000;">Salvar</button>
     </div>
   </div>
 </div>
@@ -2007,7 +2078,10 @@ function renderAdminTable() {
       return `
         <tr>
           <td>
-            <div class="player-name">${escHtml(name)}</div>
+            <div class="player-name">
+              ${escHtml(name)}
+              <button class="btn-edit-name" onclick="openEditName('${a.players?.id}', '${escHtml(name)}')" title="Editar nome">✏️</button>
+            </div>
           </td>
           <td><div class="player-phone">${phone}</div></td>
           <td>
@@ -2045,7 +2119,10 @@ function renderAdminTable() {
     document.getElementById('waitlist-count-label').textContent = waitlist.length + ' na fila';
     document.getElementById('waitlist-tbody').innerHTML = waitlist.map((a, i) => `
       <tr>
-        <td><div class="player-name">${escHtml(a.players?.name || '—')}</div></td>
+        <td><div class="player-name">
+          ${escHtml(a.players?.name || '—')}
+          <button class="btn-edit-name" onclick="openEditName('${a.players?.id}', '${escHtml(a.players?.name || '')}')" title="Editar nome">✏️</button>
+        </div></td>
         <td><div class="player-phone">${formatPhone(a.players?.phone || '')}</div></td>
         <td><span class="tag tag-waitlist">#${i+1} na fila</span></td>
         <td><button class="btn-delete" onclick="confirmDelete('${a.id}', '${escHtml(a.players?.name || '')}', true)" title="Remover da lista de espera">✕</button></td>
@@ -2264,6 +2341,67 @@ async function deconfirmSelected() {
 
 document.getElementById('deconfirm-modal-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('deconfirm-modal-overlay')) closeDeconfirmModal();
+});
+
+
+// ── EDIT PLAYER NAME ──────────────────────
+let _editPlayerId = null;
+
+function openEditName(playerId, currentName) {
+  _editPlayerId = playerId;
+  document.getElementById('edit-name-input').value = currentName || '';
+  document.getElementById('edit-name-error').style.display = 'none';
+  document.getElementById('edit-name-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('edit-name-input').select(), 100);
+}
+
+function closeEditName() {
+  _editPlayerId = null;
+  document.getElementById('edit-name-overlay').classList.remove('open');
+}
+
+async function saveEditName() {
+  const newName = document.getElementById('edit-name-input').value.trim();
+  const errEl   = document.getElementById('edit-name-error');
+  errEl.style.display = 'none';
+
+  if (!newName) {
+    errEl.textContent = 'O nome não pode ficar vazio.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!_editPlayerId) return;
+
+  const btn = document.getElementById('btn-edit-name-save');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { error } = await sbClient
+      .from('players')
+      .update({ name: newName })
+      .eq('id', _editPlayerId);
+
+    if (error) throw error;
+
+    // Update local adminAttendance so table re-renders without reload
+    adminAttendance.forEach(a => {
+      if (a.players?.id === _editPlayerId) a.players.name = newName;
+    });
+
+    renderAdminTable();
+    showToast('✓ Nome atualizado!');
+    closeEditName();
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'Erro ao salvar. Tente novamente.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
+}
+
+document.getElementById('edit-name-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('edit-name-overlay')) closeEditName();
 });
 
 // ── DELETE ATTENDANCE ──────────────────
@@ -2613,6 +2751,22 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
+
+
+<!-- EDIT NAME DIALOG -->
+<div class="edit-name-overlay" id="edit-name-overlay">
+  <div class="edit-name-box">
+    <div class="enb-title">✏️ Editar nome</div>
+    <div class="enb-sub" id="edit-name-sub">Alteração salva no cadastro do jogador.</div>
+    <input type="text" id="edit-name-input" placeholder="Nome completo" maxlength="80" />
+    <div id="edit-name-error" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;"></div>
+    <div class="edit-name-actions">
+      <button class="btn-cancel-del" onclick="closeEditName()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-edit-name-save" onclick="saveEditName()"
+        style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <!-- CONFIRM DELETE DIALOG -->
 <div class="confirm-dialog" id="confirm-dialog">
