@@ -3208,8 +3208,24 @@ async function loadHistory() {
             '<button class="hdp-edit-btn" data-action="hdelete" data-gid="' + g.id + '" data-glabel="' + weekdayLabel + ', ' + gameDateStr + '" title="Excluir jogo" style="color:var(--danger);opacity:.7;font-size:11px;">🗑️ excluir jogo</button>' +
           '</div>' +
         '</div>';
-      header.addEventListener('click', function(e) {
-        if (e.target.closest('[data-action="hdelete"]')) return;
+      header.addEventListener('click', async function(e) {
+        const delBtn = e.target.closest('[data-action="hdelete"]');
+        if (delBtn) {
+          const gid    = delBtn.dataset.gid;
+          const glabel = delBtn.dataset.glabel;
+          if (!confirm('Excluir o jogo "' + glabel + '" do histórico?\nTodos os registros de presença deste jogo serão removidos.')) return;
+          try {
+            await sbClient.from('attendance').delete().eq('game_id', gid);
+            const { error } = await sbClient.from('games').delete().eq('id', gid);
+            if (error) throw error;
+            showToast('✓ Jogo removido do histórico.');
+            await loadHistory();
+          } catch(err) {
+            console.error(err);
+            showToast('Erro ao excluir jogo.');
+          }
+          return;
+        }
         toggleHistoryDetail(panelId, this);
       });
       item.appendChild(header);
@@ -3339,23 +3355,7 @@ function toggleHistory(btn) {
 }
 
 
-// ── HISTORY DELETE GAME DELEGATION ──────────────────
-document.addEventListener('click', async function(e) {
-  const btn = e.target.closest('[data-action="hdelete"]');
-  if (!btn) return;
-  const gid    = btn.dataset.gid;
-  const glabel = btn.dataset.glabel;
-  if (!confirm('Excluir o jogo "' + glabel + '" do histórico?\nTodos os registros de presença deste jogo serão removidos.')) return;
-  try {
-    await sbClient.from('attendance').delete().eq('game_id', gid);
-    await sbClient.from('games').delete().eq('id', gid);
-    showToast('✓ Jogo removido do histórico.');
-    await loadHistory();
-  } catch(e) {
-    console.error(e);
-    showToast('Erro ao excluir jogo.');
-  }
-});
+
 
 // ── UTILS ──────────────────────────────
 function showScreen(id) {
