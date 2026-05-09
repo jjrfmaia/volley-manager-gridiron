@@ -2610,9 +2610,36 @@ function renderPlayersList(players) {
         <button class="btn-player-edit" onclick="openEditPlayer('${p.id}', '${escHtml(p.name || '')}', '${p.phone || ''}')">
           ✏️ Editar
         </button>
+        <button class="btn-player-edit" style="border-color:rgba(255,68,68,.25);color:var(--danger);"
+          onclick="confirmDeletePlayer('${p.id}', '${escHtml(p.name || '')}')">
+          🗑️
+        </button>
       </div>
     </div>
   `).join('');
+}
+
+
+async function confirmDeletePlayer(id, name) {
+  if (!confirm(`Remover "${name}" do cadastro?\n\nAtenção: o histórico de presenças deste jogador também será removido.`)) return;
+
+  try {
+    // Delete attendance records first (FK constraint)
+    await sbClient.from('attendance').delete().eq('player_id', id);
+
+    // Delete player
+    const { error } = await sbClient.from('players').delete().eq('id', id);
+    if (error) throw error;
+
+    // Remove from local list
+    _allPlayers = _allPlayers.filter(p => p.id !== id);
+    const query = document.getElementById('players-search-input').value;
+    filterPlayers(query);
+    showToast('✓ Jogador removido.');
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao remover jogador.');
+  }
 }
 
 function openEditPlayer(id, name, phone) {
