@@ -3417,30 +3417,6 @@ function escHtml(s) {
   </div>
 </div>
 
-
-<!-- HISTORY EDIT MODAL -->
-<div class="edit-name-overlay" id="history-edit-overlay">
-  <div class="edit-name-box">
-    <div class="enb-title">✏️ Editar presença</div>
-    <div class="enb-sub" id="hedit-name" style="color:var(--text);font-size:15px;font-weight:600;margin-bottom:20px;"></div>
-    <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;">
-      <input type="checkbox" id="hedit-present" style="width:17px;height:17px;accent-color:var(--volt);" />
-      <span>Presente</span>
-    </label>
-    <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer;font-size:14px;">
-      <input type="checkbox" id="hedit-paid" style="width:17px;height:17px;accent-color:var(--volt);" />
-      <span>Pago</span>
-    </label>
-    <div class="edit-name-actions">
-      <button class="btn-cancel-del" onclick="closeHistoryEdit()">Cancelar</button>
-      <button class="btn-cancel-del" onclick="deleteHistoryAttendance()"
-        style="border-color:rgba(255,68,68,.3);color:var(--danger);">🗑️ Excluir</button>
-      <button class="btn-confirm-del" id="btn-hedit-save" onclick="saveHistoryEdit()"
-        style="background:var(--volt);color:#000;">Salvar</button>
-    </div>
-  </div>
-</div>
-
 <!-- CONFIRM DELETE DIALOG -->
 <div class="confirm-dialog" id="confirm-dialog">
   <div class="confirm-box">
