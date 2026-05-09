@@ -2033,7 +2033,7 @@ async function loadAdminData() {
     // Load attendance with player info
     const { data: att } = await sbClient
       .from('attendance')
-      .select('*, players(name, phone)')
+      .select('*, players(id, name, phone)')
       .eq('game_id', gameId)
       .order('created_at', { ascending: true });
 
