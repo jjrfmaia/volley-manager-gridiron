@@ -1079,6 +1079,92 @@
   .epb-field input:focus { outline: none; border-color: var(--volt); }
   .epb-error { display:none; color:var(--danger); font-size:12px; margin-bottom:10px; }
 
+
+  /* Cash screen */
+  #screen-cash { padding: 0; }
+  .cash-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--dark1); z-index: 10;
+  }
+  .cash-nav-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; }
+  .cash-content { padding: 20px; max-width: 600px; margin: 0 auto; }
+
+  .cash-balance-card {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 20px; margin-bottom: 20px; text-align: center;
+  }
+  .cash-balance-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 8px; }
+  .cash-balance-value { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 2px; }
+  .cash-balance-value.positive { color: #00e676; }
+  .cash-balance-value.negative { color: var(--danger); }
+  .cash-balance-sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; display: flex; justify-content: center; gap: 20px; }
+  .cash-balance-sub span { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .cash-balance-sub b { font-size: 14px; font-weight: 700; }
+  .cash-balance-sub .in  { color: #00e676; }
+  .cash-balance-sub .out { color: var(--danger); }
+
+  .cash-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .btn-cash-in {
+    padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0,230,118,.3);
+    background: rgba(0,230,118,.07); color: #00e676; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .btn-cash-in:hover { background: rgba(0,230,118,.14); }
+  .btn-cash-out {
+    padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(255,68,68,.3);
+    background: rgba(255,68,68,.07); color: var(--danger); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .btn-cash-out:hover { background: rgba(255,68,68,.14); }
+
+  .cash-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 12px; }
+  .cash-tx-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .cash-tx-item:last-child { border-bottom: none; }
+  .cash-tx-info { flex: 1; }
+  .cash-tx-desc { font-size: 13px; font-weight: 500; color: var(--text); }
+  .cash-tx-date { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .cash-tx-amount { font-size: 15px; font-weight: 700; }
+  .cash-tx-amount.in  { color: #00e676; }
+  .cash-tx-amount.out { color: var(--danger); }
+  .cash-tx-delete { background: transparent; border: none; color: var(--text-faint); cursor: pointer; font-size: 14px; padding: 4px; transition: color .2s; }
+  .cash-tx-delete:hover { color: var(--danger); }
+  .cash-empty { text-align: center; color: var(--text-muted); font-size: 14px; padding: 32px 0; }
+
+  /* Amount paid field in admin table */
+  .amount-input {
+    width: 80px; padding: 5px 8px;
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 13px;
+    font-family: 'DM Sans', sans-serif; text-align: right;
+  }
+  .amount-input:focus { outline: none; border-color: var(--volt); }
+
+  /* Cash transaction modal */
+  .cash-modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,.85); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .cash-modal-overlay.open { display: flex; }
+  .cash-modal-box {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 360px;
+  }
+  .cash-modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; margin-bottom: 20px; }
+  .cash-field { margin-bottom: 14px; }
+  .cash-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); margin-bottom: 6px; }
+  .cash-field input {
+    width: 100%; padding: 11px 14px; background: rgba(255,255,255,.05);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box; transition: border-color .2s;
+  }
+  .cash-field input:focus { outline: none; border-color: var(--volt); }
+
   /* Registration toggle */
   .reg-toggle-card {
     border-radius: var(--radius);
@@ -1465,6 +1551,7 @@
     <div class="admin-nav-right">
       <span style="font-size:12px;color:var(--text-muted)" id="admin-user-label"></span>
       <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="showPlayersScreen()">👥 Jogadores</button>
+      <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="showCashScreen()">💰 Caixa</button>
       <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="doLogout()">Sair</button>
     </div>
   </nav>
@@ -1731,10 +1818,15 @@
       <input type="checkbox" id="hedit-present" style="width:17px;height:17px;accent-color:var(--volt);" />
       <span>Presente</span>
     </label>
-    <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer;font-size:14px;">
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;">
       <input type="checkbox" id="hedit-paid" style="width:17px;height:17px;accent-color:var(--volt);" />
       <span>Pago</span>
     </label>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:6px;">Valor pago (R$)</div>
+      <input type="number" id="hedit-amount" min="0" step="0.01" placeholder="0,00"
+        style="width:100%;padding:10px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;box-sizing:border-box;" />
+    </div>
     <div class="edit-name-actions">
       <button class="btn-cancel-del" onclick="closeHistoryEdit()">Cancelar</button>
       <button class="btn-cancel-del" onclick="deleteHistoryAttendance()"
@@ -2258,7 +2350,7 @@ function renderAdminTable() {
 
   const tbody = document.getElementById('players-tbody');
   if (confirmed.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6">
+    tbody.innerHTML = `<tr><td colspan="7">
       <div class="empty-state">
         <div class="es-icon">🏐</div>
         <div class="es-text">Nenhuma confirmação ainda</div>
@@ -2299,6 +2391,14 @@ function renderAdminTable() {
                 onchange="toggleAttendance('${a.id}', 'paid', this.checked)" />
               <label for="paid-${a.id}">Pago</label>
             </div>
+          </td>
+          <td>
+            <input type="number" class="amount-input" id="amt-${a.id}"
+              value="${a.amount_paid > 0 ? a.amount_paid : ''}"
+              placeholder="R$0"
+              min="0" step="0.01"
+              onchange="saveAmountPaid('${a.id}', this.value)"
+              title="Valor pago" />
           </td>
           <td>
             <button class="btn-delete" onclick="confirmDelete('${a.id}', '${escHtml(name)}', false)" title="Remover jogador">✕</button>
@@ -2609,6 +2709,178 @@ document.getElementById('edit-name-overlay').addEventListener('click', (e) => {
 });
 
 
+
+
+// ── CASH SCREEN ──────────────────────────────
+var _cashModalType = 'in'; // 'in' | 'out'
+
+async function showCashScreen() {
+  showScreen('screen-cash');
+  await loadCashData();
+}
+
+async function loadCashData() {
+  const listEl = document.getElementById('cash-tx-list');
+  listEl.innerHTML = '<div class="cash-empty">Carregando...</div>';
+
+  try {
+    // Fetch manual transactions
+    const { data: txs } = await sbClient
+      .from('cash_transactions')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    // Fetch all paid attendance amounts
+    const { data: payments } = await sbClient
+      .from('attendance')
+      .select('amount_paid, created_at, games(date), players(name)')
+      .eq('paid', true)
+      .gt('amount_paid', 0);
+
+    // Calculate totals
+    const manualIn  = (txs || []).filter(t => t.type === 'in').reduce((s, t) => s + Number(t.amount), 0);
+    const manualOut = (txs || []).filter(t => t.type === 'out').reduce((s, t) => s + Number(t.amount), 0);
+    const playersIn = (payments || []).reduce((s, p) => s + Number(p.amount_paid), 0);
+    const totalIn   = manualIn + playersIn;
+    const totalOut  = manualOut;
+    const balance   = totalIn - totalOut;
+
+    // Update balance card
+    const balEl = document.getElementById('cash-balance-value');
+    balEl.textContent = formatCurrency(balance);
+    balEl.className   = 'cash-balance-value ' + (balance >= 0 ? 'positive' : 'negative');
+    document.getElementById('cash-total-in').textContent  = formatCurrency(totalIn);
+    document.getElementById('cash-total-out').textContent = formatCurrency(totalOut);
+
+    // Build unified transaction list (manual + payments)
+    const allTxs = [];
+
+    (payments || []).forEach(p => {
+      allTxs.push({
+        type: 'in',
+        desc: (p.players?.name || 'Jogador') + ' — jogo ' + (p.games?.date ? new Date(p.games.date + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit',month:'short'}) : ''),
+        amount: Number(p.amount_paid),
+        date: p.games?.date || p.created_at,
+        id: null,
+        auto: true
+      });
+    });
+
+    (txs || []).forEach(t => {
+      allTxs.push({
+        type: t.type,
+        desc: t.description,
+        amount: Number(t.amount),
+        date: t.date,
+        id: t.id,
+        auto: false
+      });
+    });
+
+    // Sort by date desc
+    allTxs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (allTxs.length === 0) {
+      listEl.innerHTML = '<div class="cash-empty">Nenhuma movimentação ainda.</div>';
+      return;
+    }
+
+    listEl.innerHTML = allTxs.map(t => `
+      <div class="cash-tx-item">
+        <div class="cash-tx-info">
+          <div class="cash-tx-desc">${escHtml(t.desc)}</div>
+          <div class="cash-tx-date">${new Date(t.date + (t.date.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR', {day:'2-digit',month:'short',year:'numeric'})}</div>
+        </div>
+        <div class="cash-tx-amount ${t.type === 'in' ? 'in' : 'out'}">
+          ${t.type === 'in' ? '+' : '-'} ${formatCurrency(t.amount)}
+        </div>
+        ${!t.auto && t.id ? `<button class="cash-tx-delete" onclick="deleteCashTx('${t.id}')" title="Excluir">✕</button>` : '<div style="width:22px"></div>'}
+      </div>
+    `).join('');
+
+  } catch(e) {
+    console.error(e);
+    listEl.innerHTML = '<div class="cash-empty">Erro ao carregar.</div>';
+  }
+}
+
+function formatCurrency(val) {
+  return 'R$ ' + Number(val).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function openCashModal(type) {
+  _cashModalType = type;
+  document.getElementById('cash-modal-title').textContent = type === 'in' ? '＋ Nova entrada' : '－ Nova saída';
+  document.getElementById('cash-tx-desc').value   = '';
+  document.getElementById('cash-tx-amount').value = '';
+  document.getElementById('cash-tx-date').value   = new Date().toISOString().split('T')[0];
+  document.getElementById('cash-modal-error').style.display = 'none';
+  document.getElementById('cash-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('cash-tx-desc').focus(), 100);
+}
+
+function closeCashModal() {
+  document.getElementById('cash-modal-overlay').classList.remove('open');
+}
+
+async function saveCashTransaction() {
+  const desc   = document.getElementById('cash-tx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('cash-tx-amount').value);
+  const date   = document.getElementById('cash-tx-date').value;
+  const errEl  = document.getElementById('cash-modal-error');
+  errEl.style.display = 'none';
+
+  if (!desc)         { errEl.textContent = 'Informe uma descrição.'; errEl.style.display='block'; return; }
+  if (!amount || amount <= 0) { errEl.textContent = 'Informe um valor válido.'; errEl.style.display='block'; return; }
+  if (!date)         { errEl.textContent = 'Informe a data.'; errEl.style.display='block'; return; }
+
+  const btn = document.getElementById('btn-cash-save');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { error } = await sbClient.from('cash_transactions').insert({
+      type: _cashModalType, description: desc, amount, date
+    });
+    if (error) throw error;
+    showToast(_cashModalType === 'in' ? '✓ Entrada registrada!' : '✓ Saída registrada!');
+    closeCashModal();
+    await loadCashData();
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'Erro ao salvar. Tente novamente.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
+}
+
+async function deleteCashTx(id) {
+  if (!confirm('Excluir esta movimentação?')) return;
+  try {
+    const { error } = await sbClient.from('cash_transactions').delete().eq('id', id);
+    if (error) throw error;
+    showToast('✓ Movimentação removida.');
+    await loadCashData();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao excluir.');
+  }
+}
+
+async function saveAmountPaid(attendanceId, value) {
+  const amount = parseFloat(value) || 0;
+  try {
+    await sbClient.from('attendance').update({ amount_paid: amount }).eq('id', attendanceId);
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao salvar valor.');
+  }
+}
+
+document.getElementById('cash-modal-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('cash-modal-overlay')) closeCashModal();
+});
 
 // ── PLAYERS SCREEN ──────────────────────────
 let _allPlayers = [];
@@ -3173,7 +3445,7 @@ async function loadHistory() {
 
       const { data: players } = await sbClient
         .from('attendance')
-        .select('id, present, paid, players(id, name)')
+        .select('id, present, paid, amount_paid, players(id, name)')
         .eq('game_id', g.id)
         .eq('waitlist', false)
         .order('created_at', { ascending: true });
@@ -3263,7 +3535,7 @@ async function loadHistory() {
           editBtn.textContent = '✏️';
           editBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            openHistoryEdit(a.id, a.players?.name || '', a.present, a.paid);
+            openHistoryEdit(a.id, a.players?.name || '', a.present, a.paid, a.amount_paid || 0);
           });
 
           badges.appendChild(presSpan);
@@ -3290,11 +3562,12 @@ function toggleHistoryDetail(panelId, headerEl) {
 }
 
 // ── HISTORY EDIT ──────────────────────────
-function openHistoryEdit(attendanceId, name, present, paid) {
+function openHistoryEdit(attendanceId, name, present, paid, amountPaid) {
   _historyEditId = attendanceId;
   document.getElementById('hedit-name').textContent = name || '—';
   document.getElementById('hedit-present').checked = present;
   document.getElementById('hedit-paid').checked = paid;
+  document.getElementById('hedit-amount').value = amountPaid > 0 ? amountPaid : '';
   document.getElementById('history-edit-overlay').classList.add('open');
 }
 
@@ -3309,9 +3582,10 @@ async function saveHistoryEdit() {
   const paid    = document.getElementById('hedit-paid').checked;
   const btn     = document.getElementById('btn-hedit-save');
   btn.disabled = true; btn.textContent = 'Salvando...';
+  const amountPaid = parseFloat(document.getElementById('hedit-amount').value) || 0;
   try {
     const { error } = await sbClient
-      .from('attendance').update({ present, paid }).eq('id', _historyEditId);
+      .from('attendance').update({ present, paid, amount_paid: amountPaid }).eq('id', _historyEditId);
     if (error) throw error;
     showToast('✓ Presença atualizada!');
     closeHistoryEdit();
@@ -3465,6 +3739,66 @@ function escHtml(s) {
     <div class="edit-name-actions" style="margin-top:8px;">
       <button class="btn-cancel-del" onclick="closeEditPlayer()">Cancelar</button>
       <button class="btn-confirm-del" id="btn-epb-save" onclick="saveEditPlayer()"
+        style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     CASH SCREEN
+══════════════════════════════════════ -->
+<div class="screen" id="screen-cash">
+  <nav class="cash-nav">
+    <button class="btn-secondary" style="padding:6px 14px;font-size:13px" onclick="showScreen('screen-admin')">← Voltar</button>
+    <div class="cash-nav-title">💰 Caixa</div>
+    <div style="width:70px"></div>
+  </nav>
+  <div class="cash-content">
+
+    <!-- Balance card -->
+    <div class="cash-balance-card">
+      <div class="cash-balance-label">Saldo atual</div>
+      <div class="cash-balance-value" id="cash-balance-value">R$ 0,00</div>
+      <div class="cash-balance-sub">
+        <span class="in"><b id="cash-total-in">R$ 0,00</b> entradas</span>
+        <span class="out"><b id="cash-total-out">R$ 0,00</b> saídas</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="cash-actions">
+      <button class="btn-cash-in" onclick="openCashModal('in')">＋ Entrada manual</button>
+      <button class="btn-cash-out" onclick="openCashModal('out')">－ Saída / Pagamento</button>
+    </div>
+
+    <!-- Transactions list -->
+    <div class="cash-section-title">Movimentações</div>
+    <div id="cash-tx-list"><div class="cash-empty">Carregando...</div></div>
+
+  </div>
+</div>
+
+<!-- CASH TRANSACTION MODAL -->
+<div class="cash-modal-overlay" id="cash-modal-overlay">
+  <div class="cash-modal-box">
+    <div class="cash-modal-title" id="cash-modal-title">Nova entrada</div>
+    <div class="cash-field">
+      <label>Descrição</label>
+      <input type="text" id="cash-tx-desc" placeholder="Ex: Pagamento ao clube" maxlength="100" />
+    </div>
+    <div class="cash-field">
+      <label>Valor (R$)</label>
+      <input type="number" id="cash-tx-amount" placeholder="0,00" min="0.01" step="0.01" />
+    </div>
+    <div class="cash-field">
+      <label>Data</label>
+      <input type="date" id="cash-tx-date" />
+    </div>
+    <div id="cash-modal-error" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;"></div>
+    <div class="edit-name-actions" style="margin-top:8px;">
+      <button class="btn-cancel-del" onclick="closeCashModal()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-cash-save" onclick="saveCashTransaction()"
         style="background:var(--volt);color:#000;">Salvar</button>
     </div>
   </div>
