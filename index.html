@@ -3152,7 +3152,6 @@ async function loadHistory() {
   try {
     const { dateStr: activeDate } = await getActiveGameInfo();
 
-    // Only past games strictly before the active game date
     const { data: games } = await sbClient
       .from('games')
       .select('id, date')
@@ -3168,19 +3167,16 @@ async function loadHistory() {
     const weekdayNames = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 
     for (const g of games) {
-      const gameDate = new Date(g.date + 'T12:00:00');
-      const dayOfWeek = gameDate.getDay();
-      const weekdayLabel = weekdayNames[dayOfWeek];
+      const gameDate   = new Date(g.date + 'T12:00:00');
+      const weekdayLabel = weekdayNames[gameDate.getDay()];
+      const gameDateStr  = gameDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 
-      // Get confirmed players with details
       const { data: players } = await sbClient
         .from('attendance')
-        .select('id, present, paid, waitlist, players(id, name)')
+        .select('id, present, paid, players(id, name)')
         .eq('game_id', g.id)
         .eq('waitlist', false)
         .order('created_at', { ascending: true });
-
-      const confirmedCount = players?.length || 0;
 
       const { count: waitCount } = await sbClient
         .from('attendance')
@@ -3188,58 +3184,92 @@ async function loadHistory() {
         .eq('game_id', g.id)
         .eq('waitlist', true);
 
-      const gameDateStr = gameDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
-      const panelId = `hdp-${g.id}`;
+      const confirmedCount = players?.length || 0;
+      const panelId = 'hdp-' + g.id;
 
+      // ── Build item with DOM (not innerHTML) to avoid attribute corruption ──
       const item = document.createElement('div');
       item.className = 'history-item';
 
-      const playersHtml = confirmedCount === 0
-        ? '<div style="padding:12px 14px;font-size:13px;color:var(--text-muted)">Nenhum confirmado registrado.</div>'
-        : (players || []).map(a => `
-          <div class="hdp-row">
-            <div class="hdp-name">${escHtml(a.players?.name || '—')}</div>
-            <div class="hdp-badges">
-              <span class="hdp-badge ${a.present ? 'present' : 'absent'}">${a.present ? 'Presente' : 'Ausente'}</span>
-              <span class="hdp-badge ${a.paid ? 'paid' : 'unpaid'}">${a.paid ? 'Pago' : 'Pendente'}</span>
-              <button class="hdp-edit-btn"
-                data-hid="${a.id}"
-                data-hname="${escHtml(a.players?.name||'')}"
-                data-hpresent="${a.present}"
-                data-hpaid="${a.paid}"
-                data-action="hedit"
-                title="Editar">✏️</button>
-            </div>
-          </div>`).join('');
+      // Header
+      const header = document.createElement('div');
+      header.className = 'history-item-header';
+      header.innerHTML =
+        '<div>' +
+          '<div style="font-size:13px;font-weight:500;color:var(--text)">' + weekdayLabel + ', ' + gameDateStr + '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:12px;">' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:14px;font-weight:600;color:var(--volt)">' + confirmedCount + ' confirmados</div>' +
+            ((waitCount || 0) > 0 ? '<div style="font-size:11px;color:#ffa700">+' + waitCount + ' em espera</div>' : '') +
+          '</div>' +
+          '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
+            '<span class="arrow-toggle" style="color:var(--text-muted);font-size:11px;">▶</span>' +
+            '<button class="hdp-edit-btn" data-action="hdelete" data-gid="' + g.id + '" data-glabel="' + weekdayLabel + ', ' + gameDateStr + '" title="Excluir jogo" style="color:var(--danger);opacity:.7;font-size:11px;">🗑️ excluir jogo</button>' +
+          '</div>' +
+        '</div>';
+      header.addEventListener('click', function(e) {
+        if (e.target.closest('[data-action="hdelete"]')) return;
+        toggleHistoryDetail(panelId, this);
+      });
+      item.appendChild(header);
 
-      item.innerHTML = `
-        <div class="history-item-header" onclick="toggleHistoryDetail('${panelId}')">
-          <div>
-            <div style="font-size:13px;font-weight:500;color:var(--text)">${weekdayLabel}, ${gameDateStr}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="text-align:right">
-              <div style="font-size:14px;font-weight:600;color:var(--volt)">${confirmedCount} confirmados</div>
-              ${(waitCount || 0) > 0 ? `<div style="font-size:11px;color:#ffa700">+${waitCount} em espera</div>` : ''}
-            </div>
-            <span style="color:var(--text-muted);font-size:11px;">▶</span>
-          </div>
-        </div>
-        <div class="history-detail-panel" id="${panelId}">
-          ${playersHtml}
-        </div>
-      `;
+      // Detail panel
+      const panel = document.createElement('div');
+      panel.className = 'history-detail-panel';
+      panel.id = panelId;
+
+      if (confirmedCount === 0) {
+        panel.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text-muted)">Nenhum confirmado registrado.</div>';
+      } else {
+        (players || []).forEach(function(a) {
+          const row = document.createElement('div');
+          row.className = 'hdp-row';
+
+          const nameEl = document.createElement('div');
+          nameEl.className = 'hdp-name';
+          nameEl.textContent = a.players?.name || '—';
+
+          const badges = document.createElement('div');
+          badges.className = 'hdp-badges';
+
+          const presSpan = document.createElement('span');
+          presSpan.className = 'hdp-badge ' + (a.present ? 'present' : 'absent');
+          presSpan.textContent = a.present ? 'Presente' : 'Ausente';
+
+          const paidSpan = document.createElement('span');
+          paidSpan.className = 'hdp-badge ' + (a.paid ? 'paid' : 'unpaid');
+          paidSpan.textContent = a.paid ? 'Pago' : 'Pendente';
+
+          const editBtn = document.createElement('button');
+          editBtn.className = 'hdp-edit-btn';
+          editBtn.title = 'Editar';
+          editBtn.textContent = '✏️';
+          editBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openHistoryEdit(a.id, a.players?.name || '', a.present, a.paid);
+          });
+
+          badges.appendChild(presSpan);
+          badges.appendChild(paidSpan);
+          badges.appendChild(editBtn);
+          row.appendChild(nameEl);
+          row.appendChild(badges);
+          panel.appendChild(row);
+        });
+      }
+
+      item.appendChild(panel);
       hList.appendChild(item);
     }
   } catch(e) { console.error('loadHistory:', e); }
 }
 
-function toggleHistoryDetail(panelId) {
+function toggleHistoryDetail(panelId, headerEl) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
   const isOpen = panel.classList.toggle('open');
-  // Toggle arrow
-  const arrow = panel.previousElementSibling?.querySelector('span:last-child');
+  const arrow = (headerEl || panel.previousElementSibling)?.querySelector('.arrow-toggle');
   if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
 }
 
@@ -3309,15 +3339,22 @@ function toggleHistory(btn) {
 }
 
 
-// ── HISTORY EDIT EVENT DELEGATION ──────────────────
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-action="hedit"]');
+// ── HISTORY DELETE GAME DELEGATION ──────────────────
+document.addEventListener('click', async function(e) {
+  const btn = e.target.closest('[data-action="hdelete"]');
   if (!btn) return;
-  const id      = btn.dataset.hid;
-  const name    = btn.dataset.hname;
-  const present = btn.dataset.hpresent === 'true';
-  const paid    = btn.dataset.hpaid === 'true';
-  openHistoryEdit(id, name, present, paid);
+  const gid    = btn.dataset.gid;
+  const glabel = btn.dataset.glabel;
+  if (!confirm('Excluir o jogo "' + glabel + '" do histórico?\nTodos os registros de presença deste jogo serão removidos.')) return;
+  try {
+    await sbClient.from('attendance').delete().eq('game_id', gid);
+    await sbClient.from('games').delete().eq('id', gid);
+    showToast('✓ Jogo removido do histórico.');
+    await loadHistory();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao excluir jogo.');
+  }
 });
 
 // ── UTILS ──────────────────────────────
