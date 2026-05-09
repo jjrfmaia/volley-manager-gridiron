@@ -1551,6 +1551,22 @@
   </div>
 </div>
 
+
+<!-- EDIT PHONE DIALOG -->
+<div class="edit-name-overlay" id="edit-phone-overlay">
+  <div class="edit-name-box">
+    <div class="enb-title">✏️ Editar telefone</div>
+    <div class="enb-sub">Alteração salva no cadastro do jogador.</div>
+    <input type="tel" id="edit-phone-input" placeholder="(47) 99999-9999" maxlength="15" inputmode="numeric" />
+    <div id="edit-phone-error" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;"></div>
+    <div class="edit-name-actions">
+      <button class="btn-cancel-del" onclick="closeEditPhone()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-edit-phone-save" onclick="saveEditPhone()"
+        style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM DELETE DIALOG -->
 
 <script>
@@ -2083,7 +2099,10 @@ function renderAdminTable() {
               <button class="btn-edit-name" onclick="openEditName('${a.players?.id}', '${escHtml(name)}')" title="Editar nome">✏️</button>
             </div>
           </td>
-          <td><div class="player-phone">${phone}</div></td>
+          <td><div class="player-phone">
+            ${phone}
+            <button class="btn-edit-name" onclick="openEditPhone('${a.players?.id}', '${a.players?.phone || ''}')" title="Editar telefone">✏️</button>
+          </div></td>
           <td>
             <span class="tag ${a.present ? 'tag-present' : 'tag-confirmed'}">
               ${a.present ? 'Presente' : 'Confirmado'}
@@ -2123,7 +2142,10 @@ function renderAdminTable() {
           ${escHtml(a.players?.name || '—')}
           <button class="btn-edit-name" onclick="openEditName('${a.players?.id}', '${escHtml(a.players?.name || '')}')" title="Editar nome">✏️</button>
         </div></td>
-        <td><div class="player-phone">${formatPhone(a.players?.phone || '')}</div></td>
+        <td><div class="player-phone">
+          ${formatPhone(a.players?.phone || '')}
+          <button class="btn-edit-name" onclick="openEditPhone('${a.players?.id}', '${a.players?.phone || ''}')" title="Editar telefone">✏️</button>
+        </div></td>
         <td><span class="tag tag-waitlist">#${i+1} na fila</span></td>
         <td><button class="btn-delete" onclick="confirmDelete('${a.id}', '${escHtml(a.players?.name || '')}', true)" title="Remover da lista de espera">✕</button></td>
       </tr>
@@ -2406,6 +2428,97 @@ async function saveEditName() {
 
 document.getElementById('edit-name-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('edit-name-overlay')) closeEditName();
+});
+
+
+// ── EDIT PLAYER PHONE ──────────────────────
+let _editPhonePlayerId = null;
+
+function openEditPhone(playerId, currentPhone) {
+  _editPhonePlayerId = playerId;
+  // Format existing phone for display
+  const digits = (currentPhone || '').replace(/\D/g, '');
+  let formatted = '';
+  if (digits.length <= 2) formatted = digits ? '(' + digits : '';
+  else if (digits.length <= 7) formatted = '(' + digits.slice(0,2) + ') ' + digits.slice(2);
+  else formatted = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+  document.getElementById('edit-phone-input').value = formatted;
+  document.getElementById('edit-phone-error').style.display = 'none';
+  document.getElementById('edit-phone-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('edit-phone-input').select(), 100);
+}
+
+function closeEditPhone() {
+  _editPhonePlayerId = null;
+  document.getElementById('edit-phone-overlay').classList.remove('open');
+}
+
+async function saveEditPhone() {
+  const raw     = document.getElementById('edit-phone-input').value;
+  const digits  = raw.replace(/\D/g, '');
+  const errEl   = document.getElementById('edit-phone-error');
+  errEl.style.display = 'none';
+
+  if (digits.length !== 11) {
+    errEl.textContent = 'Informe o celular completo com DDD. Ex: (47) 98447-1710';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!_editPhonePlayerId) return;
+
+  const btn = document.getElementById('btn-edit-phone-save');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { data: updData, error } = await sbClient
+      .from('players')
+      .update({ phone: digits })
+      .eq('id', _editPhonePlayerId)
+      .select();
+
+    if (error) throw error;
+    if (!updData || updData.length === 0) throw new Error('RLS bloqueou o update.');
+
+    // Update local array
+    adminAttendance.forEach(a => {
+      if (a.players?.id === _editPhonePlayerId) a.players.phone = digits;
+    });
+
+    renderAdminTable();
+    showToast('✓ Telefone atualizado!');
+    closeEditPhone();
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'Erro ao salvar. Tente novamente.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
+}
+
+// Phone mask for edit modal
+(function() {
+  const inp = document.getElementById('edit-phone-input');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    let digits = this.value.replace(/\D/g, '');
+    if (digits.length > 11) digits = digits.slice(0, 11);
+    let formatted = '';
+    if (digits.length === 0) formatted = '';
+    else if (digits.length <= 2) formatted = '(' + digits;
+    else if (digits.length <= 7) formatted = '(' + digits.slice(0,2) + ') ' + digits.slice(2);
+    else formatted = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+    this.value = formatted;
+  });
+  inp.addEventListener('keydown', function(e) {
+    const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter'];
+    if (allowed.includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) e.preventDefault();
+  });
+})();
+
+document.getElementById('edit-phone-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('edit-phone-overlay')) closeEditPhone();
 });
 
 // ── DELETE ATTENDANCE ──────────────────
@@ -2767,6 +2880,22 @@ function escHtml(s) {
     <div class="edit-name-actions">
       <button class="btn-cancel-del" onclick="closeEditName()">Cancelar</button>
       <button class="btn-confirm-del" id="btn-edit-name-save" onclick="saveEditName()"
+        style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- EDIT PHONE DIALOG -->
+<div class="edit-name-overlay" id="edit-phone-overlay">
+  <div class="edit-name-box">
+    <div class="enb-title">✏️ Editar telefone</div>
+    <div class="enb-sub">Alteração salva no cadastro do jogador.</div>
+    <input type="tel" id="edit-phone-input" placeholder="(47) 99999-9999" maxlength="15" inputmode="numeric" />
+    <div id="edit-phone-error" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;"></div>
+    <div class="edit-name-actions">
+      <button class="btn-cancel-del" onclick="closeEditPhone()">Cancelar</button>
+      <button class="btn-confirm-del" id="btn-edit-phone-save" onclick="saveEditPhone()"
         style="background:var(--volt);color:#000;">Salvar</button>
     </div>
   </div>
