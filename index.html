@@ -3202,7 +3202,13 @@ async function loadHistory() {
             <div class="hdp-badges">
               <span class="hdp-badge ${a.present ? 'present' : 'absent'}">${a.present ? 'Presente' : 'Ausente'}</span>
               <span class="hdp-badge ${a.paid ? 'paid' : 'unpaid'}">${a.paid ? 'Pago' : 'Pendente'}</span>
-              <button class="hdp-edit-btn" onclick="openHistoryEdit('${a.id}','${escHtml(a.players?.name||'')}',${a.present},${a.paid})" title="Editar">✏️</button>
+              <button class="hdp-edit-btn"
+                data-hid="${a.id}"
+                data-hname="${escHtml(a.players?.name||'')}"
+                data-hpresent="${a.present}"
+                data-hpaid="${a.paid}"
+                data-action="hedit"
+                title="Editar">✏️</button>
             </div>
           </div>`).join('');
 
@@ -3301,6 +3307,18 @@ function toggleHistory(btn) {
   list.classList.toggle('open');
   btn.querySelector('span').textContent = list.classList.contains('open') ? '▼' : '▶';
 }
+
+
+// ── HISTORY EDIT EVENT DELEGATION ──────────────────
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-action="hedit"]');
+  if (!btn) return;
+  const id      = btn.dataset.hid;
+  const name    = btn.dataset.hname;
+  const present = btn.dataset.hpresent === 'true';
+  const paid    = btn.dataset.hpaid === 'true';
+  openHistoryEdit(id, name, present, paid);
+});
 
 // ── UTILS ──────────────────────────────
 function showScreen(id) {
