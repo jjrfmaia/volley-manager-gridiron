@@ -927,6 +927,44 @@
   }
 
 
+
+  /* History detail */
+  .history-item { cursor: pointer; transition: background .15s; }
+  .history-item:hover { background: rgba(255,255,255,.03); border-radius: 8px; }
+  .history-detail-panel {
+    display: none;
+    margin-top: 8px;
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .history-detail-panel.open { display: block; }
+  .hdp-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    gap: 12px;
+  }
+  .hdp-row:last-child { border-bottom: none; }
+  .hdp-name { font-size: 13px; font-weight: 500; flex: 1; }
+  .hdp-badges { display: flex; gap: 6px; align-items: center; }
+  .hdp-badge {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .8px; padding: 3px 8px; border-radius: 100px; border: 1px solid;
+  }
+  .hdp-badge.present { color: #00e676; border-color: rgba(0,230,118,.3); background: rgba(0,230,118,.07); }
+  .hdp-badge.paid    { color: var(--volt); border-color: rgba(212,255,0,.3); background: rgba(212,255,0,.06); }
+  .hdp-badge.absent  { color: var(--text-faint); border-color: rgba(255,255,255,.1); }
+  .hdp-badge.unpaid  { color: #ffa700; border-color: rgba(255,167,0,.3); background: rgba(255,167,0,.06); }
+  .hdp-edit-btn {
+    background: transparent; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 13px; padding: 2px 6px;
+    transition: color .2s; opacity: .6;
+  }
+  .hdp-edit-btn:hover { color: var(--volt); opacity: 1; }
+  .history-item-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 4px; }
+
   /* Players screen */
   #screen-players { padding: 0; }
   .players-nav {
@@ -3087,51 +3125,152 @@ function copyCharge() {
 
 async function loadHistory() {
   try {
-    const dateStr = getActiveFridayStr();
+    const { dateStr: activeDate } = await getActiveGameInfo();
 
-    // Only past games (strictly before the active friday)
+    // Only past games strictly before the active game date
     const { data: games } = await sbClient
       .from('games')
       .select('id, date')
-      .lt('date', dateStr)
+      .lt('date', activeDate)
       .order('date', { ascending: false })
-      .limit(10);
+      .limit(20);
 
     if (!games || games.length === 0) return;
 
     const hList = document.getElementById('history-list');
     hList.innerHTML = '';
 
-    for (const g of games) {
-      const { count } = await sbClient
-        .from('attendance')
-        .select('id', { count: 'exact', head: true })
-        .eq('game_id', g.id);
+    const weekdayNames = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 
-      // Also count confirmed (non-waitlist) separately
-      const { count: confirmedCount } = await sbClient
+    for (const g of games) {
+      const gameDate = new Date(g.date + 'T12:00:00');
+      const dayOfWeek = gameDate.getDay();
+      const weekdayLabel = weekdayNames[dayOfWeek];
+
+      // Get confirmed players with details
+      const { data: players } = await sbClient
+        .from('attendance')
+        .select('id, present, paid, waitlist, players(id, name)')
+        .eq('game_id', g.id)
+        .eq('waitlist', false)
+        .order('created_at', { ascending: true });
+
+      const confirmedCount = players?.length || 0;
+
+      const { count: waitCount } = await sbClient
         .from('attendance')
         .select('id', { count: 'exact', head: true })
         .eq('game_id', g.id)
-        .eq('waitlist', false);
+        .eq('waitlist', true);
 
-      const gameFriday = new Date(g.date + 'T12:00:00');
-      const gameDateStr = gameFriday.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+      const gameDateStr = gameDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+      const panelId = `hdp-${g.id}`;
 
       const item = document.createElement('div');
       item.className = 'history-item';
+
+      const playersHtml = confirmedCount === 0
+        ? '<div style="padding:12px 14px;font-size:13px;color:var(--text-muted)">Nenhum confirmado registrado.</div>'
+        : (players || []).map(a => `
+          <div class="hdp-row">
+            <div class="hdp-name">${escHtml(a.players?.name || '—')}</div>
+            <div class="hdp-badges">
+              <span class="hdp-badge ${a.present ? 'present' : 'absent'}">${a.present ? 'Presente' : 'Ausente'}</span>
+              <span class="hdp-badge ${a.paid ? 'paid' : 'unpaid'}">${a.paid ? 'Pago' : 'Pendente'}</span>
+              <button class="hdp-edit-btn" onclick="openHistoryEdit('${a.id}','${escHtml(a.players?.name||'')}',${a.present},${a.paid})" title="Editar">✏️</button>
+            </div>
+          </div>`).join('');
+
       item.innerHTML = `
-        <div>
-          <div style="font-size:13px;font-weight:500;color:var(--text)">Sexta, ${gameDateStr}</div>
+        <div class="history-item-header" onclick="toggleHistoryDetail('${panelId}')">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--text)">${weekdayLabel}, ${gameDateStr}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="text-align:right">
+              <div style="font-size:14px;font-weight:600;color:var(--volt)">${confirmedCount} confirmados</div>
+              ${(waitCount || 0) > 0 ? `<div style="font-size:11px;color:#ffa700">+${waitCount} em espera</div>` : ''}
+            </div>
+            <span style="color:var(--text-muted);font-size:11px;">▶</span>
+          </div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:14px;font-weight:600;color:var(--volt)">${confirmedCount || 0} confirmados</div>
-          ${(count || 0) > (confirmedCount || 0) ? `<div style="font-size:11px;color:#ffa700">+${(count||0)-(confirmedCount||0)} em espera</div>` : ''}
+        <div class="history-detail-panel" id="${panelId}">
+          ${playersHtml}
         </div>
       `;
       hList.appendChild(item);
     }
-  } catch(e) { /* silent */ }
+  } catch(e) { console.error('loadHistory:', e); }
+}
+
+function toggleHistoryDetail(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const isOpen = panel.classList.toggle('open');
+  // Toggle arrow
+  const arrow = panel.previousElementSibling?.querySelector('span:last-child');
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
+}
+
+// ── HISTORY EDIT ──────────────────────────
+let _historyEditId = null;
+
+function openHistoryEdit(attendanceId, name, present, paid) {
+  _historyEditId = attendanceId;
+
+  // Reuse confirm-dialog as a quick edit modal
+  const box = document.getElementById('confirm-dialog');
+  box.querySelector('.cb-icon').textContent = '✏️';
+  box.querySelector('.cb-title').textContent = 'Editar presença';
+  box.querySelector('.cb-msg').innerHTML = `
+    <span class="cb-name">${escHtml(name)}</span><br><br>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="hedit-present" ${present ? 'checked' : ''} style="width:16px;height:16px;" />
+      <span>Marcado como presente</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="hedit-paid" ${paid ? 'checked' : ''} style="width:16px;height:16px;" />
+      <span>Marcado como pago</span>
+    </label>
+  `;
+  box.querySelector('.btn-cancel-del').textContent = 'Cancelar';
+  box.querySelector('.btn-cancel-del').onclick = closeHistoryEdit;
+  box.querySelector('.btn-confirm-del').textContent = 'Salvar';
+  box.querySelector('.btn-confirm-del').onclick = saveHistoryEdit;
+  box.querySelector('.btn-confirm-del').style.background = 'var(--volt)';
+  box.querySelector('.btn-confirm-del').style.color = '#000';
+  box.classList.add('open');
+}
+
+function closeHistoryEdit() {
+  _historyEditId = null;
+  // Restore confirm dialog defaults
+  const box = document.getElementById('confirm-dialog');
+  box.classList.remove('open');
+  box.querySelector('.btn-confirm-del').style.background = 'var(--danger)';
+  box.querySelector('.btn-confirm-del').style.color = '#fff';
+  box.querySelector('.btn-confirm-del').onclick = executeDelete;
+}
+
+async function saveHistoryEdit() {
+  if (!_historyEditId) return;
+  const present = document.getElementById('hedit-present').checked;
+  const paid    = document.getElementById('hedit-paid').checked;
+  const btn     = document.getElementById('confirm-dialog').querySelector('.btn-confirm-del');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { error } = await sbClient
+      .from('attendance').update({ present, paid }).eq('id', _historyEditId);
+    if (error) throw error;
+    showToast('✓ Presença atualizada!');
+    closeHistoryEdit();
+    await loadHistory(); // refresh
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao salvar.');
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
 }
 
 function toggleHistory(btn) {
