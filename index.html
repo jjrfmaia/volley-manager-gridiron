@@ -2883,8 +2883,8 @@ document.getElementById('edit-phone-overlay').addEventListener('click', (e) => {
 });
 
 // ── DELETE ATTENDANCE ──────────────────
-let _deleteTarget = null; // { id, name, isWaitlist }
-let _historyEditId = null;
+var _deleteTarget = null; // { id, name, isWaitlist }
+var _historyEditId = null;
 
 function confirmDelete(id, name, isWaitlist) {
   _deleteTarget = { id, name, isWaitlist };
