@@ -2376,12 +2376,16 @@ async function saveEditName() {
   btn.disabled = true; btn.textContent = 'Salvando...';
 
   try {
-    const { error } = await sbClient
+    const { data: updData, error } = await sbClient
       .from('players')
       .update({ name: newName })
-      .eq('id', _editPlayerId);
+      .eq('id', _editPlayerId)
+      .select();
 
     if (error) throw error;
+    if (!updData || updData.length === 0) {
+      throw new Error('RLS bloqueou o update — verifique as políticas da tabela players.');
+    }
 
     // Update local adminAttendance so table re-renders without reload
     adminAttendance.forEach(a => {
