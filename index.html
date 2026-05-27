@@ -940,15 +940,38 @@
     overflow: hidden;
   }
   .history-detail-panel.open { display: block; }
+
+  /* Header do jogo no histórico */
+  .history-item-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 10px 4px; gap: 8px;
+  }
+  .hih-left { flex: 1; min-width: 0; }
+  .hih-date { font-size: 13px; font-weight: 500; color: var(--text); }
+  .hih-counts { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .hih-right {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0;
+  }
+  .hih-arrow { color: var(--text-muted); font-size: 11px; }
+  .hih-delete {
+    font-size: 11px; color: var(--danger); opacity: .6;
+    background: none; border: none; cursor: pointer; padding: 2px 0;
+    white-space: nowrap;
+  }
+  .hih-delete:hover { opacity: 1; }
+
+  /* Linha de jogador no detalhe */
   .hdp-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 14px;
     border-bottom: 1px solid rgba(255,255,255,.04);
-    gap: 12px;
+    gap: 10px;
   }
   .hdp-row:last-child { border-bottom: none; }
-  .hdp-name { font-size: 13px; font-weight: 500; flex: 1; }
-  .hdp-badges { display: flex; gap: 6px; align-items: center; }
+  .hdp-left { flex: 1; min-width: 0; }
+  .hdp-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .hdp-badges-line { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .hdp-right { display: flex; align-items: center; flex-shrink: 0; }
   .hdp-badge {
     font-size: 10px; font-weight: 600; text-transform: uppercase;
     letter-spacing: .8px; padding: 3px 8px; border-radius: 100px; border: 1px solid;
@@ -958,12 +981,13 @@
   .hdp-badge.absent  { color: var(--text-faint); border-color: rgba(255,255,255,.1); }
   .hdp-badge.unpaid  { color: #ffa700; border-color: rgba(255,167,0,.3); background: rgba(255,167,0,.06); }
   .hdp-edit-btn {
-    background: transparent; border: none; color: var(--text-muted);
-    cursor: pointer; font-size: 13px; padding: 2px 6px;
-    transition: color .2s; opacity: .6;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; font-size: 15px;
+    transition: all .2s; flex-shrink: 0;
   }
-  .hdp-edit-btn:hover { color: var(--volt); opacity: 1; }
-  .history-item-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 4px; }
+  .hdp-edit-btn:hover { border-color: var(--volt); background: rgba(212,255,0,.08); }
 
   /* Players screen */
   #screen-players { padding: 0; }
@@ -1468,32 +1492,10 @@
     /* Edit name/phone buttons inline */
     .btn-edit-name { padding: 4px 6px; font-size: 14px; }
 
-    /* History detail rows — stack on mobile */
-    .hdp-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 12px 14px;
-    }
-    .hdp-name { font-size: 14px; font-weight: 600; }
-    .hdp-badges {
-      width: 100%;
-      justify-content: space-between;
-    }
-    .hdp-badge { font-size: 11px; padding: 4px 10px; }
-    .hdp-edit-btn {
-      padding: 6px 12px;
-      font-size: 14px;
-      background: rgba(255,255,255,.05);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      opacity: 1;
-      min-width: 44px; min-height: 44px;
-      display: flex; align-items: center; justify-content: center;
-    }
-
-    /* History header compact */
+    /* History header compact on mobile */
     .history-item-header { padding: 12px 4px; }
+    .hih-date { font-size: 13px; }
+    .hih-counts { font-size: 11px; }
 
     /* Schedule fields */
     .schedule-fields { grid-template-columns: 1fr 1fr; }
@@ -3725,19 +3727,15 @@ async function loadHistory() {
       // Header
       const header = document.createElement('div');
       header.className = 'history-item-header';
+      var waitStr = (waitCount || 0) > 0 ? ' · +' + waitCount + ' espera' : '';
       header.innerHTML =
-        '<div>' +
-          '<div style="font-size:13px;font-weight:500;color:var(--text)">' + weekdayLabel + ', ' + gameDateStr + '</div>' +
+        '<div class="hih-left">' +
+          '<div class="hih-date">' + weekdayLabel + ', ' + gameDateStr + '</div>' +
+          '<div class="hih-counts">' + confirmedCount + ' confirmados' + waitStr + '</div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:12px;">' +
-          '<div style="text-align:right">' +
-            '<div style="font-size:14px;font-weight:600;color:var(--volt)">' + confirmedCount + ' confirmados</div>' +
-            ((waitCount || 0) > 0 ? '<div style="font-size:11px;color:#ffa700">+' + waitCount + ' em espera</div>' : '') +
-          '</div>' +
-          '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
-            '<span class="arrow-toggle" style="color:var(--text-muted);font-size:11px;">▶</span>' +
-            '<button class="hdp-edit-btn" data-action="hdelete" data-gid="' + g.id + '" data-glabel="' + weekdayLabel + ', ' + gameDateStr + '" title="Excluir jogo" style="color:var(--danger);opacity:.7;font-size:11px;">🗑️ excluir jogo</button>' +
-          '</div>' +
+        '<div class="hih-right">' +
+          '<span class="arrow-toggle hih-arrow">▶</span>' +
+          '<button class="hih-delete" data-action="hdelete" data-gid="' + g.id + '" data-glabel="' + weekdayLabel + ', ' + gameDateStr + '">🗑️ excluir jogo</button>' +
         '</div>';
       header.addEventListener('click', async function(e) {
         const delBtn = e.target.closest('[data-action="hdelete"]');
@@ -3773,22 +3771,42 @@ async function loadHistory() {
           const row = document.createElement('div');
           row.className = 'hdp-row';
 
-          const nameEl = document.createElement('div');
+          // Left: name + badges stacked
+          var leftEl = document.createElement('div');
+          leftEl.className = 'hdp-left';
+
+          var nameEl = document.createElement('div');
           nameEl.className = 'hdp-name';
           nameEl.textContent = a.players?.name || '—';
 
-          const badges = document.createElement('div');
-          badges.className = 'hdp-badges';
+          var badgesLine = document.createElement('div');
+          badgesLine.className = 'hdp-badges-line';
 
-          const presSpan = document.createElement('span');
+          var presSpan = document.createElement('span');
           presSpan.className = 'hdp-badge ' + (a.present ? 'present' : 'absent');
           presSpan.textContent = a.present ? 'Presente' : 'Ausente';
 
-          const paidSpan = document.createElement('span');
+          var paidSpan = document.createElement('span');
           paidSpan.className = 'hdp-badge ' + (a.paid ? 'paid' : 'unpaid');
           paidSpan.textContent = a.paid ? 'Pago' : 'Pendente';
 
-          const editBtn = document.createElement('button');
+          if (a.amount_paid > 0) {
+            var amtSpan = document.createElement('span');
+            amtSpan.className = 'hdp-badge paid';
+            amtSpan.textContent = 'R$ ' + Number(a.amount_paid).toFixed(2).replace('.', ',');
+            badgesLine.appendChild(amtSpan);
+          }
+
+          badgesLine.appendChild(presSpan);
+          badgesLine.appendChild(paidSpan);
+          leftEl.appendChild(nameEl);
+          leftEl.appendChild(badgesLine);
+
+          // Right: edit button
+          var rightEl = document.createElement('div');
+          rightEl.className = 'hdp-right';
+
+          var editBtn = document.createElement('button');
           editBtn.className = 'hdp-edit-btn';
           editBtn.title = 'Editar';
           editBtn.textContent = '✏️';
@@ -3797,11 +3815,9 @@ async function loadHistory() {
             openHistoryEdit(a.id, a.players?.name || '', a.present, a.paid, a.amount_paid || 0);
           });
 
-          badges.appendChild(presSpan);
-          badges.appendChild(paidSpan);
-          badges.appendChild(editBtn);
-          row.appendChild(nameEl);
-          row.appendChild(badges);
+          rightEl.appendChild(editBtn);
+          row.appendChild(leftEl);
+          row.appendChild(rightEl);
           panel.appendChild(row);
         });
       }
