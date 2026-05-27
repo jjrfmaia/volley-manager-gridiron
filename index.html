@@ -1221,6 +1221,97 @@
 
   .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
 
+
+  /* Add player modal */
+  .add-player-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,.88); backdrop-filter: blur(4px);
+    align-items: flex-end; justify-content: center; padding: 0;
+  }
+  .add-player-overlay.open { display: flex; }
+  .add-player-sheet {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0; width: 100%; max-width: 540px;
+    max-height: 90vh; display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  .add-player-handle {
+    width: 40px; height: 4px; background: rgba(255,255,255,.15);
+    border-radius: 2px; margin: 12px auto 0;
+  }
+  .add-player-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .add-player-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; }
+  .add-player-tabs {
+    display: flex; gap: 0; margin-top: 12px;
+    background: rgba(255,255,255,.05); border-radius: 8px; padding: 3px;
+  }
+  .add-tab {
+    flex: 1; padding: 8px; border: none; background: transparent;
+    color: var(--text-muted); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer;
+    transition: all .2s;
+  }
+  .add-tab.active { background: var(--dark1); color: var(--text); }
+  .add-player-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+
+  /* Search existing */
+  .add-search-input {
+    width: 100%; padding: 11px 14px; background: rgba(255,255,255,.05);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box; margin-bottom: 12px; transition: border-color .2s;
+  }
+  .add-search-input:focus { outline: none; border-color: var(--volt); }
+  .add-search-input::placeholder { color: var(--text-faint); }
+  .add-search-results { display: flex; flex-direction: column; gap: 8px; }
+  .add-player-result {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; background: rgba(255,255,255,.03);
+    border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: all .2s; gap: 12px;
+  }
+  .add-player-result:hover { border-color: rgba(212,255,0,.3); background: rgba(212,255,0,.04); }
+  .add-player-result.already-in {
+    opacity: .4; cursor: not-allowed;
+    border-color: transparent;
+  }
+  .apr-info { flex: 1; min-width: 0; }
+  .apr-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .apr-phone { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .apr-tag { font-size: 10px; color: var(--text-faint); background: rgba(255,255,255,.06); border-radius: 100px; padding: 3px 8px; white-space: nowrap; }
+
+  /* New player form */
+  .add-new-field { margin-bottom: 14px; }
+  .add-new-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); margin-bottom: 6px; }
+  .add-new-field input {
+    width: 100%; padding: 11px 14px; background: rgba(255,255,255,.05);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box; transition: border-color .2s;
+  }
+  .add-new-field input:focus { outline: none; border-color: var(--volt); }
+  .add-player-error { display:none; color:var(--danger); font-size:12px; margin-bottom:12px; }
+  .btn-add-confirm {
+    width: 100%; padding: 14px; background: rgba(212,255,0,.1);
+    border: 1px solid rgba(212,255,0,.3); border-radius: var(--radius-sm);
+    color: var(--volt); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 4px;
+  }
+  .btn-add-confirm:hover { background: rgba(212,255,0,.18); }
+  .btn-add-confirm:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Add button in section header */
+  .btn-add-player {
+    padding: 6px 12px; background: rgba(212,255,0,.08);
+    border: 1px solid rgba(212,255,0,.25); border-radius: 100px;
+    color: var(--volt); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .btn-add-player:hover { background: rgba(212,255,0,.16); }
+
   /* Registration toggle */
   .reg-toggle-card {
     border-radius: var(--radius);
@@ -1802,7 +1893,10 @@
     <div class="players-section">
       <div class="players-section-header">
         <span class="section-title" style="margin-bottom:0">🏐 Confirmados</span>
-        <span style="font-size:12px;color:var(--text-muted)" id="confirmed-count-label">0 jogadores</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:12px;color:var(--text-muted)" id="confirmed-count-label">0 jogadores</span>
+          <button class="btn-add-player" onclick="openAddPlayerModal()">＋ Adicionar</button>
+        </div>
       </div>
       <table class="players-table">
         <thead>
@@ -3493,6 +3587,137 @@ document.getElementById('confirm-dialog').addEventListener('click', (e) => {
 
 
 
+
+// ── ADD PLAYER TO GAME (ADMIN) ──────────────────────────
+var _addSearchTimer = null;
+
+function openAddPlayerModal() {
+  switchAddTab('existing');
+  document.getElementById('add-search-input').value = '';
+  document.getElementById('add-search-results').innerHTML =
+    '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;">Digite para buscar jogadores cadastrados</div>';
+  document.getElementById('add-new-name').value = '';
+  document.getElementById('add-new-phone').value = '';
+  document.getElementById('add-new-error').style.display = 'none';
+  document.getElementById('add-player-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('add-search-input').focus(), 100);
+}
+
+function closeAddPlayerModal() {
+  document.getElementById('add-player-overlay').classList.remove('open');
+}
+
+function switchAddTab(tab) {
+  document.getElementById('add-tab-existing').classList.toggle('active', tab === 'existing');
+  document.getElementById('add-tab-new').classList.toggle('active', tab === 'new');
+  document.getElementById('add-panel-existing').style.display = tab === 'existing' ? 'block' : 'none';
+  document.getElementById('add-panel-new').style.display      = tab === 'new'      ? 'block' : 'none';
+  if (tab === 'new') setTimeout(() => document.getElementById('add-new-name').focus(), 100);
+}
+
+async function searchExistingPlayers(query) {
+  clearTimeout(_addSearchTimer);
+  const resultsEl = document.getElementById('add-search-results');
+  if (!query.trim()) {
+    resultsEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;">Digite para buscar jogadores cadastrados</div>';
+    return;
+  }
+  _addSearchTimer = setTimeout(async function() {
+    try {
+      const q = query.trim();
+      const digits = q.replace(/\D/g, '');
+      let qb = sbClient.from('players').select('id, name, phone');
+      qb = digits.length >= 3 ? qb.ilike('phone', '%' + digits + '%') : qb.ilike('name', '%' + q + '%');
+      const { data } = await qb.order('name').limit(10);
+
+      if (!data || data.length === 0) {
+        resultsEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;">Nenhum jogador encontrado.</div>';
+        return;
+      }
+      const alreadyIn = new Set(adminAttendance.map(a => a.players?.id).filter(Boolean));
+      resultsEl.innerHTML = '';
+      data.forEach(function(p) {
+        const inGame = alreadyIn.has(p.id);
+        const div = document.createElement('div');
+        div.className = 'add-player-result' + (inGame ? ' already-in' : '');
+        div.innerHTML =
+          '<div class="apr-info">' +
+            '<div class="apr-name">' + escHtml(p.name || '—') + '</div>' +
+            '<div class="apr-phone">' + formatPhone(p.phone || '') + '</div>' +
+          '</div>' +
+          '<div class="apr-tag">' + (inGame ? '✓ já confirmado' : '＋ adicionar') + '</div>';
+        if (!inGame) div.addEventListener('click', () => addExistingPlayerToGame(p.id, p.name));
+        resultsEl.appendChild(div);
+      });
+    } catch(e) { console.error(e); }
+  }, 300);
+}
+
+async function addExistingPlayerToGame(playerId, playerName) {
+  if (!currentGameId) { showToast('Nenhum jogo ativo.'); return; }
+  try {
+    const isWaitlist = adminAttendance.filter(a => !a.waitlist).length >= MAX_PLAYERS;
+    const { error } = await sbClient.from('attendance').insert({
+      game_id: currentGameId, player_id: playerId, waitlist: isWaitlist
+    });
+    if (error) throw error;
+    showToast('✓ ' + playerName + (isWaitlist ? ' adicionado à fila de espera!' : ' adicionado aos confirmados!'));
+    closeAddPlayerModal();
+    await loadAdminData();
+  } catch(e) { console.error(e); showToast('Erro ao adicionar jogador.'); }
+}
+
+async function addNewPlayerToGame() {
+  const name  = document.getElementById('add-new-name').value.trim();
+  const phone = document.getElementById('add-new-phone').value.replace(/\D/g, '');
+  const errEl = document.getElementById('add-new-error');
+  errEl.style.display = 'none';
+  if (!name)          { errEl.textContent = 'Informe o nome completo.';          errEl.style.display='block'; return; }
+  if (phone.length !== 11) { errEl.textContent = 'Informe o celular completo com DDD.'; errEl.style.display='block'; return; }
+  if (!currentGameId) { errEl.textContent = 'Nenhum jogo ativo.';                errEl.style.display='block'; return; }
+  const btn = document.getElementById('btn-add-new-confirm');
+  btn.disabled = true; btn.textContent = 'Adicionando...';
+  try {
+    let { data: existing } = await sbClient.from('players').select('id').eq('phone', phone).maybeSingle();
+    let playerId = existing ? existing.id : null;
+    if (!playerId) {
+      const { data: np, error: npe } = await sbClient.from('players').insert({ name, phone }).select('id').single();
+      if (npe) throw npe;
+      playerId = np.id;
+    }
+    const isWaitlist = adminAttendance.filter(a => !a.waitlist).length >= MAX_PLAYERS;
+    const { error } = await sbClient.from('attendance').insert({ game_id: currentGameId, player_id: playerId, waitlist: isWaitlist });
+    if (error) throw error;
+    showToast('✓ ' + name + (isWaitlist ? ' adicionado à fila!' : ' adicionado aos confirmados!'));
+    closeAddPlayerModal();
+    await loadAdminData();
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'Erro ao adicionar. Tente novamente.';
+    errEl.style.display = 'block';
+  } finally { btn.disabled = false; btn.textContent = 'Adicionar ao jogo'; }
+}
+
+document.getElementById('add-player-overlay').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('add-player-overlay')) closeAddPlayerModal();
+});
+
+// Phone mask for add new player modal
+(function() {
+  var inp = document.getElementById('add-new-phone');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    var d = this.value.replace(/\D/g, '');
+    if (d.length > 11) d = d.slice(0, 11);
+    var f = d.length === 0 ? '' : d.length <= 2 ? '(' + d : d.length <= 7 ? '(' + d.slice(0,2) + ') ' + d.slice(2) : '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7);
+    this.value = f;
+  });
+  inp.addEventListener('keydown', function(e) {
+    if (['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter'].includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) e.preventDefault();
+  });
+})();
+
 // ── SCHEDULE EDITOR ──────────────────────────
 
 // Weekday names PT
@@ -4075,6 +4300,51 @@ function escHtml(s) {
       <button class="btn-cancel-del" onclick="closeCashModal()">Cancelar</button>
       <button class="btn-confirm-del" id="btn-cash-save" onclick="saveCashTransaction()"
         style="background:var(--volt);color:#000;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ADD PLAYER MODAL -->
+<div class="add-player-overlay" id="add-player-overlay">
+  <div class="add-player-sheet">
+    <div class="add-player-handle"></div>
+    <div class="add-player-header">
+      <div class="add-player-title">＋ Adicionar jogador</div>
+      <div class="add-player-tabs">
+        <button class="add-tab active" id="add-tab-existing" onclick="switchAddTab('existing')">Jogador existente</button>
+        <button class="add-tab" id="add-tab-new" onclick="switchAddTab('new')">Novo jogador</button>
+      </div>
+    </div>
+
+    <div class="add-player-body">
+      <!-- Tab: existing -->
+      <div id="add-panel-existing">
+        <input type="search" class="add-search-input" id="add-search-input"
+          placeholder="🔍 Buscar por nome ou telefone..."
+          oninput="searchExistingPlayers(this.value)" />
+        <div class="add-search-results" id="add-search-results">
+          <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;">
+            Digite para buscar jogadores cadastrados
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: new -->
+      <div id="add-panel-new" style="display:none">
+        <div class="add-new-field">
+          <label>Nome completo</label>
+          <input type="text" id="add-new-name" placeholder="Ex: João da Silva" maxlength="80" />
+        </div>
+        <div class="add-new-field">
+          <label>Telefone com DDD</label>
+          <input type="tel" id="add-new-phone" placeholder="(47) 99999-9999" maxlength="15" inputmode="numeric" />
+        </div>
+        <div class="add-player-error" id="add-new-error"></div>
+        <button class="btn-add-confirm" id="btn-add-new-confirm" onclick="addNewPlayerToGame()">
+          Adicionar ao jogo
+        </button>
+      </div>
     </div>
   </div>
 </div>
