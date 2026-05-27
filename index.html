@@ -1165,6 +1165,38 @@
   }
   .cash-field input:focus { outline: none; border-color: var(--volt); }
 
+
+  /* Autocomplete */
+  .field-wrap { position: relative; }
+  .autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: #1e1e1e; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); margin-top: 4px;
+    max-height: 200px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .autocomplete-item {
+    padding: 12px 14px; cursor: pointer;
+    transition: background .15s; border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.active { background: rgba(212,255,0,.08); }
+  .autocomplete-item-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .autocomplete-item-phone { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Found player tag */
+  .player-found-tag {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(0,230,118,.07); border: 1px solid rgba(0,230,118,.25);
+    border-radius: var(--radius-sm); margin-top: 4px;
+  }
+  .player-found-tag .pft-name { font-size: 14px; font-weight: 600; color: #00e676; }
+  .player-found-tag .pft-clear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .player-found-tag .pft-clear:hover { color: var(--text); }
+
+  .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+
   /* Registration toggle */
   .reg-toggle-card {
     border-radius: var(--radius);
@@ -1477,17 +1509,32 @@
 
     <div id="modal-form-content">
       <div class="modal-title">Sua presença 🏐</div>
-      <div class="modal-sub">Preencha seus dados para confirmar.</div>
+      <div class="modal-sub">Digite seu telefone ou nome para confirmar.</div>
 
       <div class="modal-error" id="modal-error"></div>
 
-      <div class="field">
-        <label>Nome completo</label>
-        <input type="text" id="inp-name" placeholder="Ex: João da Silva" autocomplete="name" />
-      </div>
+      <!-- Phone field — primary lookup -->
       <div class="field">
         <label>Telefone com DDD</label>
-        <input type="tel" id="inp-phone" placeholder="(47) 99999-9999" autocomplete="tel" maxlength="15" inputmode="numeric" />
+        <input type="tel" id="inp-phone" placeholder="(47) 99999-9999" autocomplete="tel" maxlength="15" inputmode="numeric" oninput="onPhoneInput()" />
+        <div class="field-hint" id="phone-hint">Digite seu número — preencheremos seu nome automaticamente.</div>
+      </div>
+
+      <!-- Name field — shown after phone lookup or for new users -->
+      <div class="field" id="name-field">
+        <label>Nome completo</label>
+        <div class="field-wrap">
+          <input type="text" id="inp-name" placeholder="Ex: João da Silva" autocomplete="off" oninput="onNameInput()" />
+          <div class="autocomplete-list" id="name-autocomplete" style="display:none"></div>
+        </div>
+        <!-- Found player tag (replaces input when matched by phone) -->
+        <div class="player-found-tag" id="player-found-tag" style="display:none">
+          <div>
+            <div class="pft-name" id="player-found-name"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Cadastro encontrado ✓</div>
+          </div>
+          <button class="pft-clear" onclick="clearFoundPlayer()" title="Não sou eu">✕</button>
+        </div>
       </div>
 
       <button class="btn-confirm" id="btn-submit-confirm" onclick="submitConfirm()">
@@ -2046,12 +2093,20 @@ function updateSlots(count) {
 function openModal() {
   const btn = document.getElementById('btn-confirm-main');
   if (btn && btn.disabled) return; // blocked
+  // Reset state
+  _foundPlayer = null;
+  document.getElementById('inp-phone').value = '';
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-name').style.display = 'block';
+  document.getElementById('player-found-tag').style.display = 'none';
+  document.getElementById('phone-hint').textContent = 'Digite seu número — preencheremos seu nome automaticamente.';
+  hideAutocomplete();
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-form-content').style.display = 'block';
   document.getElementById('modal-success').style.display = 'none';
   document.getElementById('modal-waitlist').style.display = 'none';
   document.getElementById('modal-error').style.display = 'none';
-  document.getElementById('inp-name').focus();
+  document.getElementById('inp-phone').focus();
 }
 
 function closeModal() {
@@ -2060,6 +2115,120 @@ function closeModal() {
 
 document.getElementById('modal-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+
+// ── SMART CONFIRM MODAL ──────────────────────────
+var _foundPlayer = null; // { id, name, phone } when matched
+
+function clearFoundPlayer() {
+  _foundPlayer = null;
+  document.getElementById('player-found-tag').style.display = 'none';
+  document.getElementById('inp-name').style.display = 'block';
+  document.getElementById('inp-name').value = '';
+  document.getElementById('phone-hint').textContent = 'Digite seu número — preencheremos seu nome automaticamente.';
+}
+
+// Phone lookup: when full phone typed, search players
+async function onPhoneInput() {
+  const digits = document.getElementById('inp-phone').value.replace(/\D/g, '');
+  const hint   = document.getElementById('phone-hint');
+
+  if (digits.length === 11 && sbClient) {
+    hint.textContent = 'Buscando cadastro...';
+    try {
+      const { data } = await sbClient
+        .from('players').select('id, name, phone').eq('phone', digits).maybeSingle();
+
+      if (data) {
+        // Found — show tag, hide input
+        _foundPlayer = data;
+        document.getElementById('player-found-name').textContent = data.name;
+        document.getElementById('player-found-tag').style.display = 'flex';
+        document.getElementById('inp-name').style.display = 'none';
+        document.getElementById('inp-name').value = data.name;
+        hint.textContent = '';
+        hideAutocomplete();
+      } else {
+        // Not found — show name field for new registration
+        _foundPlayer = null;
+        document.getElementById('player-found-tag').style.display = 'none';
+        document.getElementById('inp-name').style.display = 'block';
+        document.getElementById('inp-name').value = '';
+        document.getElementById('inp-name').focus();
+        hint.textContent = 'Número não encontrado — preencha seu nome para se cadastrar.';
+      }
+    } catch(e) {
+      hint.textContent = '';
+    }
+  } else if (digits.length < 11) {
+    clearFoundPlayer();
+    hint.textContent = 'Digite seu número — preencheremos seu nome automaticamente.';
+  }
+}
+
+// Name autocomplete: search players by name
+var _autocompleteTimer = null;
+async function onNameInput() {
+  const q = document.getElementById('inp-name').value.trim();
+  clearTimeout(_autocompleteTimer);
+  if (q.length < 2) { hideAutocomplete(); return; }
+
+  _autocompleteTimer = setTimeout(async function() {
+    try {
+      const { data } = await sbClient
+        .from('players').select('id, name, phone')
+        .ilike('name', '%' + q + '%')
+        .limit(6);
+
+      if (!data || data.length === 0) { hideAutocomplete(); return; }
+
+      const list = document.getElementById('name-autocomplete');
+      list.innerHTML = data.map(p => `
+        <div class="autocomplete-item" data-pid="${p.id}" data-pname="${escHtml(p.name)}" data-pphone="${p.phone}">
+          <div class="autocomplete-item-name">${escHtml(p.name)}</div>
+          <div class="autocomplete-item-phone">${formatPhone(p.phone)}</div>
+        </div>
+      `).join('');
+      list.style.display = 'block';
+
+      // Click handler for each item
+      list.querySelectorAll('.autocomplete-item').forEach(function(el) {
+        el.addEventListener('click', function() {
+          selectAutocompletePlayer(this.dataset.pid, this.dataset.pname, this.dataset.pphone);
+        });
+      });
+    } catch(e) { hideAutocomplete(); }
+  }, 300);
+}
+
+function selectAutocompletePlayer(id, name, phone) {
+  _foundPlayer = { id, name, phone };
+  // Fill phone
+  const digits = (phone || '').replace(/\D/g, '');
+  let fmt = '';
+  if (digits.length > 7) fmt = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+  else if (digits.length > 2) fmt = '(' + digits.slice(0,2) + ') ' + digits.slice(2);
+  else fmt = digits;
+  document.getElementById('inp-phone').value = fmt;
+
+  // Show found tag
+  document.getElementById('player-found-name').textContent = name;
+  document.getElementById('player-found-tag').style.display = 'flex';
+  document.getElementById('inp-name').style.display = 'none';
+  document.getElementById('inp-name').value = name;
+  document.getElementById('phone-hint').textContent = '';
+  hideAutocomplete();
+}
+
+function hideAutocomplete() {
+  const list = document.getElementById('name-autocomplete');
+  if (list) list.style.display = 'none';
+}
+
+// Close autocomplete clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#name-field')) hideAutocomplete();
 });
 
 // ── PHONE MASK ─────────────────────────
@@ -3135,6 +3304,7 @@ async function saveEditPhone() {
   if (!inp) return;
   inp.addEventListener('input', function() {
     let digits = this.value.replace(/\D/g, '');
+    // Note: onPhoneInput() is called via oninput attribute after mask runs
     if (digits.length > 11) digits = digits.slice(0, 11);
     let formatted = '';
     if (digits.length === 0) formatted = '';
