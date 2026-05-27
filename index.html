@@ -1412,15 +1412,104 @@
   @media (max-width: 600px) {
     .home-content { padding: 40px 20px 40px; }
     .nav-bar { margin-bottom: 40px; }
-    .players-table th:nth-child(3),
-    .players-table td:nth-child(3) { display: none; }
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .admin-content { padding: 20px 16px 60px; }
+
+    /* Admin nav — smaller buttons */
+    .admin-nav-right { gap: 6px; }
+    .admin-nav-right .btn-secondary { padding: 5px 9px; font-size: 11px; }
+    .admin-nav-logo { font-size: 14px; }
+
+    /* Admin table → card layout on mobile */
+    .players-table thead { display: none; }
+    .players-table, .players-table tbody,
+    .players-table tr, .players-table td { display: block; width: 100%; }
+
+    .players-table tr {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      position: relative;
+    }
+    .players-table tr:hover td { background: transparent; }
+    .players-table td {
+      padding: 4px 0;
+      border-bottom: none;
+      font-size: 13px;
+    }
+
+    /* Name + phone stacked */
+    .players-table td:nth-child(1) { padding-bottom: 8px; padding-right: 80px; }
+    .player-phone { display: block; }
+
+    /* Checkboxes row */
+    .players-table td:nth-child(2),
+    .players-table td:nth-child(3) {
+      display: inline-flex;
+      width: auto;
+      margin-right: 16px;
+      padding: 0;
+    }
+
+    /* Amount input */
+    .players-table td:nth-child(4) { display: inline-flex; width: auto; padding: 6px 0 0; }
+    .amount-input { width: 90px; }
+
+    /* Delete button — top right corner */
+    .players-table td:nth-child(5) {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: auto;
+      padding: 0;
+    }
+
+    /* Edit name/phone buttons inline */
+    .btn-edit-name { padding: 4px 6px; font-size: 14px; }
+
+    /* History detail rows — stack on mobile */
+    .hdp-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 14px;
+    }
+    .hdp-name { font-size: 14px; font-weight: 600; }
+    .hdp-badges {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .hdp-badge { font-size: 11px; padding: 4px 10px; }
+    .hdp-edit-btn {
+      padding: 6px 12px;
+      font-size: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      opacity: 1;
+      min-width: 44px; min-height: 44px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* History header compact */
+    .history-item-header { padding: 12px 4px; }
+
+    /* Schedule fields */
+    .schedule-fields { grid-template-columns: 1fr 1fr; }
+
+    /* Cash screen */
+    .cash-actions { grid-template-columns: 1fr 1fr; }
+    .cash-balance-value { font-size: 36px; }
+
+    /* Players screen search */
+    .player-card { flex-wrap: wrap; }
+    .player-card-actions { width: 100%; justify-content: flex-end; margin-top: 8px; }
   }
 
   @media (max-width: 400px) {
-    .players-table th:nth-child(2),
-    .players-table td:nth-child(2) { display: none; }
+    .admin-nav-right .btn-secondary { padding: 4px 7px; font-size: 10px; }
+    .cash-balance-value { font-size: 28px; }
   }
 </style>
 </head>
